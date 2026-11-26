@@ -1,0 +1,1396 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Órdenes de Trabajo GD</title>
+<meta name="theme-color" content="#1f3b33">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* Herramienta de campo: barra superior fija, pestañas, formularios en tarjetas apiladas en celular */
+:root{
+  --bg:#f3f5f2; --panel:#ffffff; --ink:#18241f; --muted:#5d6b64; --line:#d9e0db;
+  --brand:#1f3b33; --brand-ink:#ffffff; --accent:#c98a12; --accent-soft:#fbf1dc;
+  --ok:#2f7a4a; --danger:#b23a2b; --field:#fbfcfb;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111815; --panel:#18211d; --ink:#e6ece8; --muted:#9aa8a1; --line:#2b3732;
+  --brand:#1a2e28; --brand-ink:#e6ece8; --accent:#e0a53a; --accent-soft:#33291a;
+  --ok:#5fb37d; --danger:#e07062; --field:#121a17; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111815; --panel:#18211d; --ink:#e6ece8; --muted:#9aa8a1; --line:#2b3732;
+  --brand:#1a2e28; --brand-ink:#e6ece8; --accent:#e0a53a; --accent-soft:#33291a;
+  --ok:#5fb37d; --danger:#e07062; --field:#121a17; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--sans);padding-bottom:env(safe-area-inset-bottom,0px)}
+header{position:sticky;top:0;z-index:5;background:var(--brand);color:var(--brand-ink);
+  padding:calc(10px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+.top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;max-width:1000px;margin:0 auto}
+.top h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.2px}
+.top small{opacity:.75;font-size:12px}
+nav{display:flex;gap:4px;max-width:1000px;margin:8px auto 0;overflow-x:auto}
+nav button{background:none;border:0;color:var(--brand-ink);opacity:.7;font:600 14px var(--sans);padding:10px 12px;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+nav button.on{opacity:1;border-bottom-color:var(--accent)}
+main{max-width:1000px;margin:0 auto;padding:16px max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px));display:grid;gap:14px}
+section.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:12px;min-width:0}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:0;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+label{display:grid;gap:4px;font-size:12px;color:var(--muted);font-weight:500;min-width:0}
+input,select,textarea{font:15px var(--sans);color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:7px;padding:9px 10px;width:100%;min-width:0}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+textarea{min-height:60px;resize:vertical}
+.btn{font:600 14px var(--sans);border-radius:8px;padding:10px 14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.btn.accent{background:var(--accent);color:#1b1305;border-color:var(--accent)}
+.btn.danger{color:var(--danger)}
+.btn.sm{padding:6px 10px;font-size:13px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.calc{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.calc div{background:var(--accent-soft);border-radius:8px;padding:10px 12px}
+.calc b{display:block;font:500 20px var(--mono)}
+.calc span{font-size:12px;color:var(--muted)}
+.items{display:grid;gap:10px}
+.item{border:1px solid var(--line);border-radius:8px;padding:12px;display:grid;gap:8px;background:var(--field)}
+.item .g{display:grid;grid-template-columns:2fr 1.4fr 1.4fr .9fr .9fr;gap:8px}
+.item .res{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted)}
+.item .res b{color:var(--ink)}
+.step{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--brand);color:var(--brand-ink);font:600 12px var(--sans)}
+.hint{font-size:12px;color:var(--muted)}
+.mix{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+.mix li{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600}
+.pill{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.pill.plan{background:var(--accent-soft);color:var(--accent)}
+.pill.ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;z-index:20}
+.confirm{background:var(--accent-soft);border:1px solid var(--accent);border-radius:8px;padding:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.olist{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.oc{border:1px solid var(--line);border-radius:8px;padding:12px;display:grid;gap:6px;background:var(--field);min-width:0}
+.empty{color:var(--muted);text-align:center;padding:20px}
+@media (max-width:640px){
+  .grid{grid-template-columns:1fr 1fr}
+  .olist{grid-template-columns:1fr}
+  .item .g{grid-template-columns:1fr 1fr}
+  .item .g label:first-child{grid-column:1/-1}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<style>
+.login{max-width:380px;margin:40px auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;display:grid;gap:12px}
+.login h2{font-size:16px;text-transform:none;letter-spacing:0;color:var(--ink)}
+.err{color:var(--danger);font-size:13px}
+.user{display:flex;gap:8px;align-items:center;font-size:12px;opacity:.9;flex-wrap:wrap;justify-content:flex-end}
+.user button,.campoBtn{background:none;border:1px solid rgba(255,255,255,.35);color:var(--brand-ink);border-radius:6px;padding:3px 8px;font:600 12px var(--sans);cursor:pointer}
+.campoBtn{font-size:13px;padding:4px 10px;background:rgba(255,255,255,.08)}
+.who{font-size:11px;color:var(--muted)}
+.campos{max-width:560px;margin:24px auto;display:grid;gap:14px;width:100%}
+.campos h2{font-size:18px;text-transform:none;letter-spacing:0;color:var(--ink)}
+.clist{display:grid;gap:8px}
+.cbtn{display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;font:600 16px var(--sans);color:var(--ink);cursor:pointer}
+.cbtn:hover{border-color:var(--accent)}
+.cbtn span{font:400 12px var(--sans);color:var(--muted)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.tiles div{background:var(--accent-soft);border-radius:8px;padding:10px 12px}
+.tiles b{display:block;font:500 20px var(--mono)}
+.tiles span{font-size:12px;color:var(--muted)}
+[hidden]{display:none!important}
+td.r,th.r{text-align:right}
+td.r{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.sub{font-size:12px;color:var(--muted)}
+.hdr{display:flex;align-items:center;gap:10px}
+.tema{display:grid;place-items:center;width:34px;height:34px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);color:var(--brand-ink);cursor:pointer;padding:0}
+.tema:hover{background:rgba(255,255,255,.18)}
+.tema svg{width:18px;height:18px}
+.tema .sol{display:none}
+:root[data-theme="dark"] .tema .sol{display:block}
+:root[data-theme="dark"] .tema .luna{display:none}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .tema .sol{display:block}
+  :root:not([data-theme="light"]) .tema .luna{display:none}}
+.neg{color:var(--danger)!important;font-weight:600}
+.warn{color:var(--danger);font-size:12px;font-weight:600}
+.money{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.seg{justify-self:start;display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--panel);color:var(--ink);font:600 13px var(--sans);padding:8px 12px;cursor:pointer}
+.seg button.on{background:var(--brand);color:var(--brand-ink)}
+.lin{display:grid;grid-template-columns:2fr 1fr .8fr 1.1fr auto;gap:8px;align-items:end;border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--field)}
+.lin .pu{font-size:12px;color:var(--muted);grid-column:1/-1}
+.usos{display:grid;gap:8px}
+.uso{display:grid;grid-template-columns:2fr 1fr 1.2fr;gap:8px;align-items:center;border-bottom:1px solid var(--line);padding-bottom:8px}
+.uso .p{font-weight:600}
+.uso .pl{font-size:13px;color:var(--muted)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:30;display:grid;place-items:center;padding:20px;cursor:zoom-out}
+.modal img{max-width:100%;max-height:90vh;border-radius:6px;background:#fff}
+.nuevo{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.grid{align-items:start}
+.grid label:has(.nuevo),.g label:has(.nuevo),.lin label:has(.nuevo){grid-column:1/-1}
+.nuevo input{flex:1;min-width:140px}
+.lst{display:grid;gap:8px;padding-top:4px}
+.lst+.lst{border-top:1px solid var(--line);padding-top:14px}
+.lst h3{margin:0;font-size:15px}
+.lrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lrow input{flex:1;min-width:160px}
+.lrow select{flex:1;min-width:150px;width:auto}
+.fuera{display:grid;gap:8px;background:var(--accent-soft);border-radius:8px;padding:10px}
+.fn{font-weight:600;min-width:100px}
+.thumb{height:64px;border-radius:6px;border:1px solid var(--line);cursor:zoom-in}
+@media (max-width:640px){
+  .lin{grid-template-columns:1fr 1fr}
+  .lin label:first-child{grid-column:1/-1}
+  .uso{grid-template-columns:1fr 1fr}
+  .uso>div:first-child{grid-column:1/-1}
+}
+</style>
+<script>
+/* Aplica el modo guardado antes de dibujar, para que no parpadee */
+try{const t=localStorage.getItem('tema');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}
+</script>
+</head>
+<body>
+<header>
+  <div class="top"><h1>Órdenes de Trabajo GD</h1>
+    <div class="hdr">
+      <div class="user" id="userBox" hidden><button class="campoBtn" id="bCampo" hidden></button><span id="userName"></span><button id="bSalir">Salir</button></div>
+      <button class="tema" id="bTema" type="button" aria-label="Cambiar entre modo claro y oscuro" title="Modo claro / oscuro">
+        <svg class="luna" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg class="sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div></div>
+  <nav id="nav" hidden>
+    <button data-tab="orden" class="on">Nueva orden</button>
+    <button data-tab="historial">Historial</button>
+    <button data-tab="informes">Informes</button>
+    <button data-tab="deposito">Depósito</button>
+    <button data-tab="productos">Productos</button>
+    <button data-tab="ajustes">Ajustes</button>
+  </nav>
+</header>
+<main id="app"><div class="empty">Cargando…</div></main>
+
+<datalist id="dlProductos"></datalist>
+<datalist id="dlContratistas"></datalist>
+<datalist id="dlPotreros"></datalist>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* =========================================================
+   CONFIGURACIÓN DE FIREBASE
+   Reemplazar este bloque por el que da Firebase al registrar la app web
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyCxTE2Ojpm_qNQ0wVW-9KpsaoFU7cfyBKk",
+  authDomain: "ordenes-trabajo-gd.firebaseapp.com",
+  projectId: "ordenes-trabajo-gd",
+  storageBucket: "ordenes-trabajo-gd.firebasestorage.app",
+  messagingSenderId: "998039657702",
+  appId: "1:998039657702:web:ee17c7eabe9d435fb9ef27"
+};
+</script>
+<script>
+/* ===================== DATOS FIJOS ===================== */
+const FORMS = {
+  ACOND:{l:'Corrector / acondicionador de agua',o:1,r:'Agregar primero y dejar actuar sobre el agua antes que el resto.'},
+  WG:{l:'WG - Granulado dispersable',o:2,r:'Premezclar en balde con agua. Volcar despacio con agitación.'},
+  WP:{l:'WP - Polvo mojable',o:2,r:'Hacer una pasta previa con poca agua. Agitación constante.'},
+  SG:{l:'SG/SP - Polvo o granulado soluble',o:2,r:'Disolver bien antes de agregar el siguiente.'},
+  SC:{l:'SC - Suspensión concentrada',o:3,r:'Agitar bien el envase antes de medir.'},
+  CS:{l:'CS - Microencapsulado',o:3,r:'Agitar bien el envase antes de medir.'},
+  SE:{l:'SE / EW - Suspoemulsión / emulsión',o:4,r:'Agitar el envase. Agregar con agitación.'},
+  OD:{l:'OD - Dispersión oleosa',o:4,r:'Agitar el envase. Agregar con agitación.'},
+  EC:{l:'EC - Concentrado emulsionable',o:5,r:'Controlar que la mezcla no se corte. Ojo con aguas duras.'},
+  SL:{l:'SL - Concentrado soluble',o:6,r:'Agregar con agitación.'},
+  FOL:{l:'Fertilizante foliar',o:7,r:'Agregar con el tanque bien avanzado de agua.'},
+  ACE:{l:'Aceite',o:8,r:'Agregar casi al final, con agitación.'},
+  COA:{l:'Coadyuvante / tensioactivo',o:9,r:'Agregar último.'},
+  OTRO:{l:'Otro',o:7,r:''}
+};
+const UNITS = {'L/ha':{f:1,b:'L'},'cc/ha':{f:.001,b:'L'},'kg/ha':{f:1,b:'kg'},'g/ha':{f:.001,b:'kg'}};
+const LABORES = ['Pulverización terrestre','Pulverización aérea','Fertilización','Siembra','Refertilización','Otra'];
+const NOTAS_DEF=`Verificar la calidad del agua antes de empezar.
+Mantener la agitación durante toda la carga y la aplicación.
+Esperar que cada producto se integre antes de agregar el siguiente.
+Aplicar el caldo apenas termina la preparación.
+Usar equipo de protección personal.
+Triple lavado y disposición segura de envases.`;
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+/* ===================== FIREBASE ===================== */
+const configOk = !Object.values(firebaseConfig).some(v=>String(v).includes('PEGAR'));
+let auth, db, USER=null, baseSubs=[], campoSubs=[];
+if(configOk){
+  firebase.initializeApp(firebaseConfig);
+  auth=firebase.auth(); db=firebase.firestore();
+  db.enablePersistence({synchronizeTabs:true}).catch(()=>{});   // funciona sin señal y sincroniza después
+}
+const TS=()=>firebase.firestore.FieldValue.serverTimestamp();
+const BORRAR=()=>firebase.firestore.FieldValue.delete();
+
+/* Estado: campos y productos son de todos; órdenes y compras se cargan solo del campo elegido */
+const vacio=()=>({campos:[],products:[],orders:[],compras:[],listas:{},camposOk:false,ordOk:false,compOk:false});
+let S=vacio();
+let CID=null;
+let draft=null, tab='orden', editingId=null, cierreId=null, compraDraft=null;
+const campo=()=>S.campos.find(c=>c.id===CID)||{};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const n=v=>{const x=parseFloat(String(v??'').replace(',','.'));return isFinite(x)?x:0};
+const fmt=(v,d=2)=>Number(v||0).toLocaleString('es-UY',{maximumFractionDigits:d,minimumFractionDigits:0});
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const quien=()=>USER?(USER.email||''):'';
+const corto=e=>String(e||'').split('@')[0];
+function fmtDate(d){if(!d)return'';const[a,m,dd]=d.split('-');return`${dd}/${m}/${a}`}
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const lsSet=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}};
+const norm=s=>String(s||'').trim().toLowerCase();
+const keyOf=(prod,base)=>norm(prod)+'|'+base;
+
+/* ---------- Ingreso ---------- */
+let loginMsg='';
+function vLogin(msg=''){
+  msg=msg||loginMsg;loginMsg='';
+  $('#nav').hidden=true;$('#userBox').hidden=true;
+  if(!configOk){$('#app').innerHTML=`<div class="login"><h2>Falta conectar la base de datos</h2><p class="hint">Hay que pegar la configuración de Firebase en el archivo.</p></div>`;return}
+  $('#app').innerHTML=`
+  <form class="login" id="fLogin" autocomplete="on">
+    <h2>Ingresar</h2>
+    <label>Correo<input type="email" id="lEmail" autocomplete="username" required></label>
+    <label>Contraseña<input type="password" id="lPass" autocomplete="current-password" required></label>
+    <div class="err" id="lErr">${esc(msg)}</div>
+    <button class="btn primary" type="submit" id="lBtn">Entrar</button>
+    <button class="btn sm" type="button" id="lReset">Olvidé mi contraseña</button>
+    <p class="hint">Solo pueden entrar los usuarios habilitados por el administrador.</p>
+  </form>`;
+  $('#fLogin').onsubmit=async e=>{e.preventDefault();$('#lBtn').disabled=true;$('#lErr').textContent='';
+    try{await auth.signInWithEmailAndPassword($('#lEmail').value.trim(),$('#lPass').value)}
+    catch(x){$('#lErr').textContent=x.code==='auth/too-many-requests'?'Demasiados intentos. Esperá unos minutos.':'Correo o contraseña incorrectos.';$('#lBtn').disabled=false}};
+  $('#lReset').onclick=async()=>{const em=$('#lEmail').value.trim();if(!em){$('#lErr').textContent='Escribí tu correo arriba y tocá de nuevo.';return}
+    try{await auth.sendPasswordResetEmail(em)}catch(x){} $('#lErr').textContent='Si el correo está habilitado, te llega un mail para cambiar la contraseña.'};
+}
+const sinPermiso=e=>{if(e&&e.code==='permission-denied'){loginMsg='Tu usuario no tiene permiso. Pedile al administrador que te habilite.';salir()}};
+
+function startBase(){
+  stopAll();
+  baseSubs.push(db.collection('campos').onSnapshot(q=>{
+    S.campos=q.docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
+    const primera=!S.camposOk;S.camposOk=true;
+    if(primera){const g=lsGet('campoElegido');if(g&&S.campos.some(c=>c.id===g))entrarCampo(g);else vCampos()}
+    else if(!CID)vCampos(); else softRender();
+  },sinPermiso));
+  baseSubs.push(db.collection('productos').onSnapshot(q=>{
+    S.products=q.docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
+    if(CID)softRender();
+  },sinPermiso));
+  baseSubs.push(db.collection('config').doc('listas').onSnapshot(d=>{S.listas=(d&&d.exists&&d.data())||{};if(CID)softRender()},sinPermiso));
+}
+function entrarCampo(id){
+  campoSubs.forEach(u=>u());campoSubs=[];
+  CID=id;lsSet('campoElegido',id);S.orders=[];S.compras=[];S.ordOk=false;S.compOk=false;
+  draft=null;editingId=null;cierreId=null;compraDraft=null;tab='orden';
+  $('#app').innerHTML='<div class="empty">Cargando…</div>';
+  const listo=()=>{if(S.ordOk&&S.compOk){if(!listo.hecho){listo.hecho=true;render()}else softRender()}};
+  campoSubs.push(db.collection('ordenes').where('campoId','==',id).onSnapshot(q=>{
+    S.orders=q.docs.map(d=>({...d.data(),id:d.id}));S.ordOk=true;listo()},sinPermiso));
+  campoSubs.push(db.collection('compras').where('campoId','==',id).onSnapshot(q=>{
+    S.compras=q.docs.map(d=>({...d.data(),id:d.id}));S.compOk=true;listo()},sinPermiso));
+}
+function stopAll(){baseSubs.forEach(u=>u());baseSubs=[];campoSubs.forEach(u=>u());campoSubs=[]}
+function salir(){stopAll();CID=null;draft=null;editingId=null;S=vacio();auth.signOut()}
+
+/* ---------- Elegir campo ---------- */
+function vCampos(){
+  campoSubs.forEach(u=>u());campoSubs=[];
+  CID=null;$('#nav').hidden=true;$('#userBox').hidden=false;$('#bCampo').hidden=true;$('#userName').textContent=corto(quien());
+  $('#app').innerHTML=`
+  <div class="campos">
+    <h2>¿En qué campo vas a trabajar?</h2>
+    <div class="clist">${S.campos.length?S.campos.map(c=>`<button class="cbtn" data-c="${c.id}">${esc(c.nombre||'Sin nombre')}<span>Entrar</span></button>`).join('')
+      :'<div class="empty">Todavía no hay campos. Creá el primero acá abajo.</div>'}</div>
+    <section class="card">
+      <h2>Nuevo campo</h2>
+      <div class="row"><input id="nCampo" placeholder="Nombre del campo" style="flex:1;min-width:180px"><button class="btn primary" id="bNuevoCampo">Crear</button></div>
+    </section>
+  </div>`;
+  document.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>entrarCampo(b.dataset.c));
+  $('#bNuevoCampo').onclick=async()=>{
+    const nom=$('#nCampo').value.trim();if(!nom){toast('Escribí el nombre del campo');return}
+    if(S.campos.some(c=>(c.nombre||'').toLowerCase()===nom.toLowerCase())){toast('Ya existe un campo con ese nombre');return}
+    try{const r=await db.collection('campos').add({nombre:nom,responsable:'',logo:'',notas:NOTAS_DEF,next:1,creadoPor:quien(),creadoEn:TS()});toast('Campo creado');entrarCampo(r.id)}
+    catch(x){toast('No se pudo crear el campo')}
+  };
+}
+
+/* ===================== CÁLCULOS ===================== */
+function calc(o){
+  const sup=n(o.sup),caudal=n(o.caudal),tq=n(o.tanque);
+  const haTq=caudal>0?tq/caudal:0;
+  const tanques=haTq>0?sup/haTq:0;
+  const llenos=Math.floor(tanques+1e-9);
+  const resto=tanques-llenos;
+  const ultimoL=resto*tq;
+  const items=(o.items||[]).filter(i=>i.prod||n(i.dosis)).map(i=>{
+    const u=UNITS[i.unidad]||UNITS['L/ha'];
+    return {...i,total:n(i.dosis)*sup*u.f,porTq:n(i.dosis)*haTq*u.f,ult:n(i.dosis)*resto*haTq*u.f,base:u.b,orden:(FORMS[i.form]||FORMS.OTRO).o};
+  }).sort((a,b)=>a.orden-b.orden);
+  return {sup,caudal,tq,haTq,tanques,llenos,resto,ultimoL,agua:sup*caudal,items};
+}
+const ejecutada=o=>o.estado==='Ejecutada';
+/* Lo que consume cada orden: en las ejecutadas lo usado de verdad, en las planificadas lo calculado */
+function consumo(o){
+  const ej=ejecutada(o)&&o.cierre, us=(ej&&o.cierre.usado)||{};
+  return calc(o).items.filter(i=>i.prod).map(i=>{
+    const key=keyOf(i.prod,i.base), u=us[key], real=ej?(u!==undefined&&u!==''?n(u):i.total):null;
+    return {...i,key,plan:i.total,real,cant:ej?real:i.total};
+  });
+}
+const haReal=o=>(ejecutada(o)&&o.cierre&&n(o.cierre.ha))?n(o.cierre.ha):n(o.sup);
+/* Precio promedio en USD por L o kg, sacado de las facturas de cada campo; si no hay, el precio de referencia del producto */
+function precios(compras){
+  const m={};
+  compras.filter(x=>!x.borrado).forEach(cp=>{
+    const tc=cp.moneda==='PES'?n(cp.cotizacion):1;
+    (cp.items||[]).forEach(it=>{const q=n(it.cantidad),imp=n(it.importe);if(q<=0||imp<=0||!tc)return;
+      const r=m[cp.campoId+'|'+keyOf(it.prod,it.unidad)]||(m[cp.campoId+'|'+keyOf(it.prod,it.unidad)]={q:0,usd:0});r.q+=q;r.usd+=imp/tc});
+  });
+  const ref={};S.products.forEach(p=>{if(n(p.precio))ref[keyOf(p.nombre,(UNITS[p.unidad]||UNITS['L/ha']).b)]=n(p.precio)});
+  const f=(cid,key)=>{const r=m[cid+'|'+key];if(r&&r.q)return r.usd/r.q;return ref[key]??null};
+  f.origen=(cid,key)=>m[cid+'|'+key]?'facturas':(ref[key]!=null?'referencia':'');
+  return f;
+}
+function costos(o,P){
+  let ins=0,falta=0;
+  const items=consumo(o).map(i=>{const pu=P(o.campoId,i.key);if(pu==null&&i.cant>0)falta++;const c=(pu||0)*i.cant;ins+=c;return{...i,pu,costo:c}});
+  const ha=haReal(o), lab=ha*n(o.precio);
+  return {items,ins,lab,tot:ins+lab,ha,porHa:ha?(ins+lab)/ha:0,falta};
+}
+/* Stock por campo y producto: entradas (facturas y ajustes) menos lo usado en órdenes ejecutadas */
+function stock(orders,compras,P){
+  const m={};
+  const g=(cid,k,prod,base)=>m[cid+'|'+k]||(m[cid+'|'+k]={campoId:cid,key:k,prod:String(prod).trim(),base,entra:0,sale:0,comp:0});
+  compras.filter(x=>!x.borrado).forEach(cp=>(cp.items||[]).forEach(it=>{if(!it.prod)return;g(cp.campoId,keyOf(it.prod,it.unidad),it.prod,it.unidad).entra+=n(it.cantidad)}));
+  orders.filter(o=>!o.borrado).forEach(o=>consumo(o).forEach(i=>{const r=g(o.campoId,i.key,i.prod,i.base);if(ejecutada(o))r.sale+=i.cant;else r.comp+=i.cant}));
+  return Object.values(m).map(r=>{const pu=P?P(r.campoId,r.key):null;const actual=r.entra-r.sale;
+    return{...r,actual,disp:actual-r.comp,pu,valor:pu!=null&&actual>0?pu*actual:0}}).sort((a,b)=>a.prod.localeCompare(b.prod));
+}
+const stockCampo=()=>{const P=precios(S.compras);const st={};stock(S.orders,S.compras,P).forEach(r=>st[r.key]=r);return st};
+
+
+/* ===================== LISTAS DESPLEGABLES =====================
+   Potreros (de cada campo), contratistas y cultivos (de todos los campos) y productos.
+   Siempre se elige de la lista, así un mismo potrero o contratista se escribe una sola vez y los informes no se entreveran. */
+const LISTAS={
+  potrero:{titulo:'Potreros de este campo',campoOrden:'potrero',nota:'Cada campo tiene sus propios potreros.'},
+  contratista:{titulo:'Contratistas',campoOrden:'contratista',nota:'La lista es la misma para todos los campos.'},
+  cultivo:{titulo:'Cultivos',campoOrden:'cultivo',nota:'La lista es la misma para todos los campos.'}
+};
+const NUEVO='__nuevo__';
+const limpiarNombre=s=>String(s||'').trim().replace(/\s+/g,' ');
+function lista(tipo){
+  if(tipo==='producto')return [...new Set(S.products.map(p=>p.nombre).filter(Boolean).map(limpiarNombre))].sort((a,b)=>a.localeCompare(b));
+  const arr=tipo==='potrero'?(campo().potreros||[]):((S.listas||{})[tipo+'s']||[]);
+  return [...arr].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+}
+async function agregarALista(tipo,nombre,extra){
+  nombre=limpiarNombre(nombre);if(!nombre)return null;
+  const ya=lista(tipo).find(x=>norm(x)===norm(nombre));if(ya){toast(`Ya estaba en la lista como "${ya}"`);return ya}
+  const AU=firebase.firestore.FieldValue.arrayUnion(nombre);
+  try{
+    if(tipo==='producto')agregarAlCatalogo([{prod:nombre,...(extra||{})}]);
+    else if(tipo==='potrero'){const c=campo();c.potreros=[...(c.potreros||[]),nombre];await db.collection('campos').doc(CID).set({potreros:AU},{merge:true})}
+    else{S.listas[tipo+'s']=[...(S.listas[tipo+'s']||[]),nombre];await db.collection('config').doc('listas').set({[tipo+'s']:AU},{merge:true})}
+  }catch(x){toast('No se pudo guardar en la lista');return null}
+  toast('Agregado a la lista');return nombre;
+}
+function selLista(attrs,tipo,valor){
+  const items=lista(tipo), fuera=valor&&!items.includes(valor);
+  const ops=[...items.map(x=>[x,x]),...(fuera?[[valor,valor+' (no está en la lista)']]:[])];
+  return `<select ${attrs} data-lista="${tipo}"><option value="">Elegí…</option>${opt(ops,valor)}<option value="${NUEVO}">+ Agregar nuevo…</option></select>`;
+}
+/* Al elegir "+ Agregar nuevo" aparece un renglón para escribirlo. Si ya existe uno parecido, se usa el de la lista */
+function bindLista(sel,tipo,onPick,extra){
+  let prev=sel.value;
+  sel.addEventListener('change',()=>{
+    if(sel.value!==NUEVO){prev=sel.value;onPick(sel.value);return}
+    sel.value=prev;
+    if(sel.nextElementSibling&&sel.nextElementSibling.classList.contains('nuevo')){sel.nextElementSibling.querySelector('input').focus();return}
+    const box=document.createElement('div');box.className='nuevo';
+    box.innerHTML=`<input placeholder="Escribí el nombre nuevo"><button type="button" class="btn sm primary">Agregar</button><button type="button" class="btn sm">Cancelar</button>`;
+    sel.insertAdjacentElement('afterend',box);
+    const inp=box.querySelector('input');inp.focus();
+    const ok=async()=>{const v=limpiarNombre(inp.value);if(!v){inp.focus();return}
+      const nombre=await agregarALista(tipo,v,extra&&extra());if(!nombre)return;box.remove();
+      const tmp=document.createElement('div');tmp.innerHTML=selLista('',tipo,nombre);sel.innerHTML=tmp.firstElementChild.innerHTML;
+      sel.value=nombre;prev=nombre;onPick(nombre)};
+    box.querySelector('.primary').onclick=e=>{e.preventDefault();ok()};
+    inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();ok()}if(e.key==='Escape')box.remove()};
+    box.querySelector('.btn:not(.primary)').onclick=e=>{e.preventDefault();box.remove()};
+  });
+}
+/* Cambia un nombre en la lista y en todo lo ya cargado. Si el nombre nuevo ya existe, los une */
+async function renombrar(tipo,viejo,nuevo){
+  nuevo=limpiarNombre(nuevo);if(!nuevo||nuevo===viejo)return false;
+  const existe=lista(tipo).find(x=>norm(x)===norm(nuevo)&&x!==viejo), destino=existe||nuevo;
+  const igual=v=>norm(v)===norm(viejo);
+  toast('Actualizando todo lo cargado…');
+  try{
+    const ups=[];
+    if(tipo==='producto'){
+      const [qo,qc]=await Promise.all([db.collection('ordenes').get(),db.collection('compras').get()]);
+      qo.docs.forEach(d=>{const o=d.data();let cambio=false;
+        const items=(o.items||[]).map(i=>igual(i.prod)?(cambio=true,{...i,prod:destino}):i);
+        let cierre=o.cierre;
+        if(cierre&&cierre.usado){const u={};let cu=false;
+          for(const k in cierre.usado){const b=k.slice(k.lastIndexOf('|')+1),p=k.slice(0,k.lastIndexOf('|'));
+            const nk=p===norm(viejo)?(cu=true,keyOf(destino,b)):k;u[nk]=r3((u[nk]||0)+n(cierre.usado[k]))}
+          if(cu){cierre={...cierre,usado:u};cambio=true}}
+        if(cambio)ups.push(d.ref.update(cierre?{items,cierre}:{items}))});
+      qc.docs.forEach(d=>{const c=d.data();if((c.items||[]).some(i=>igual(i.prod)))ups.push(d.ref.update({items:c.items.map(i=>igual(i.prod)?{...i,prod:destino}:i)}))});
+      S.products.filter(p=>igual(p.nombre)).forEach(p=>ups.push(existe?db.collection('productos').doc(p.id).delete():db.collection('productos').doc(p.id).update({nombre:destino})));
+    }else{
+      const k=LISTAS[tipo].campoOrden;
+      const nueva=[...new Set([...lista(tipo).filter(x=>!igual(x)),destino])];
+      if(tipo==='potrero'){
+        ups.push(db.collection('campos').doc(CID).set({potreros:nueva},{merge:true}));
+        S.orders.filter(o=>igual(o[k])).forEach(o=>ups.push(db.collection('ordenes').doc(o.id).update({[k]:destino})));
+      }else{
+        ups.push(db.collection('config').doc('listas').set({[tipo+'s']:nueva},{merge:true}));
+        const qo=await db.collection('ordenes').get();
+        qo.docs.forEach(d=>{if(igual(d.data()[k]))ups.push(d.ref.update({[k]:destino}))});
+      }
+    }
+    await Promise.all(ups);
+    toast(existe?`Unificado con "${destino}"`:'Nombre cambiado en todo lo cargado');return true;
+  }catch(x){toast('No se pudo cambiar el nombre. Probá de nuevo.');return false}
+}
+async function quitarDeLista(tipo,nombre){
+  const nueva=lista(tipo).filter(x=>x!==nombre);
+  try{if(tipo==='potrero')await db.collection('campos').doc(CID).set({potreros:nueva},{merge:true});
+    else await db.collection('config').doc('listas').set({[tipo+'s']:nueva},{merge:true});toast('Quitado de la lista')}
+  catch(x){toast('No se pudo quitar')}
+}
+/* Pantalla para ordenar las listas: renombrar, unir y sumar los nombres que quedaron escritos distinto */
+function htmlListas(){
+  return Object.entries(LISTAS).map(([tipo,L])=>{
+    const items=lista(tipo);
+    const usados=[...new Set(activas().map(o=>limpiarNombre(o[L.campoOrden])).filter(Boolean))];
+    const fuera=usados.filter(u=>!items.includes(u));
+    return `<div class="lst" data-tipo="${tipo}">
+      <h3>${L.titulo}</h3><p class="hint">${L.nota} Si cambiás un nombre, se cambia en todas las órdenes. Si le ponés el nombre de otro que ya existe, se unen.</p>
+      ${items.length?items.map(x=>`<div class="lrow"><input value="${esc(x)}" data-ren="${esc(x)}" aria-label="Nombre"><button class="btn sm danger" data-quitar="${esc(x)}">Quitar</button></div>`).join(''):'<div class="hint">La lista está vacía.</div>'}
+      <div class="lrow"><input placeholder="Agregar a la lista" data-add><button class="btn sm primary" data-addbtn>Agregar</button></div>
+      ${fuera.length?`<div class="fuera"><b>Escritos en órdenes pero fuera de la lista</b>${fuera.map(f=>`
+        <div class="lrow"><span class="fn">${esc(f)}</span>
+          <select data-unir="${esc(f)}"><option value="">Unificar con…</option>${opt(items.map(x=>[x,x]),'')}</select>
+          <button class="btn sm" data-sumar="${esc(f)}">Sumar a la lista</button></div>`).join('')}</div>`:''}
+    </div>`}).join('');
+}
+function bindListas(rehacer){
+  document.querySelectorAll('.lst').forEach(box=>{
+    const tipo=box.dataset.tipo;
+    box.querySelectorAll('[data-ren]').forEach(inp=>inp.addEventListener('change',async()=>{
+      if(!limpiarNombre(inp.value)){inp.value=inp.dataset.ren;return}
+      if(await renombrar(tipo,inp.dataset.ren,inp.value))setTimeout(rehacer,400)}));
+    box.querySelectorAll('[data-quitar]').forEach(b=>b.onclick=async()=>{await quitarDeLista(tipo,b.dataset.quitar);setTimeout(rehacer,300)});
+    const add=box.querySelector('[data-add]'), go=async()=>{if(await agregarALista(tipo,add.value))setTimeout(rehacer,300)};
+    box.querySelector('[data-addbtn]').onclick=go;add.onkeydown=e=>{if(e.key==='Enter')go()};
+    box.querySelectorAll('[data-unir]').forEach(s=>s.onchange=async()=>{if(s.value&&await renombrar(tipo,s.dataset.unir,s.value))setTimeout(rehacer,400)});
+    box.querySelectorAll('[data-sumar]').forEach(b=>b.onclick=async()=>{if(await agregarALista(tipo,b.dataset.sumar))setTimeout(rehacer,300)});
+  });
+}
+
+/* ===================== VISTAS ===================== */
+function render(){
+  if(!CID){vCampos();return}
+  $('#nav').hidden=false;$('#userBox').hidden=false;$('#userName').textContent=corto(quien());
+  $('#bCampo').hidden=false;$('#bCampo').textContent=(campo().nombre||'Campo')+' · cambiar';
+  const pest={cierre:'historial',compra:'deposito'}[tab]||tab;
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===pest));
+  fillLists();
+  ({orden:vOrden,historial:vHist,informes:vInf,deposito:vDep,compra:vCompra,cierre:vCierre,productos:vProd,ajustes:vAjustes})[tab]();
+}
+/* Re-dibuja con datos nuevos de otros usuarios sin pisar lo que se está escribiendo */
+function softRender(){
+  if(!CID||!S.ordOk||!S.compOk)return;
+  if(!S.campos.some(c=>c.id===CID)){lsSet('campoElegido',null);vCampos();return}
+  $('#bCampo').textContent=(campo().nombre||'Campo')+' · cambiar';
+  fillLists();
+  if(tab==='historial')vHist();
+  if(tab==='informes')vInf();
+  if(tab==='deposito')vDep();
+  if(tab==='orden'&&$('#numBox')){$('#numBox').textContent=editingId?draft.num:'(se asigna al guardar)';updCalc()}
+}
+const activas=()=>S.orders.filter(o=>!o.borrado);
+function fillLists(){
+  $('#dlProductos').innerHTML=S.products.map(p=>`<option value="${esc(p.nombre)}">`).join('');
+  $('#dlContratistas').innerHTML=[...new Set(activas().map(o=>o.contratista).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join('');
+  $('#dlPotreros').innerHTML=[...new Set(activas().map(o=>o.potrero).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join('');
+}
+const opt=(arr,sel)=>arr.map(([v,l])=>`<option value="${esc(v)}"${v===sel?' selected':''}>${esc(l)}</option>`).join('');
+function newDraft(){
+  return {num:null,fecha:today(),potrero:'',cultivo:'',
+    labor:LABORES[0],contratista:'',operario:'',precio:'',sup:'',caudal:'80',tanque:'3000',obs:'',
+    items:[{prod:'',comercial:'',form:'SL',dosis:'',unidad:'L/ha'}]};
+}
+const CAMPOS=['num','fecha','potrero','cultivo','labor','contratista','operario','precio','sup','caudal','tanque','obs','items'];
+const limpio=o=>{const r={};CAMPOS.forEach(k=>r[k]=o[k]??'');return JSON.parse(JSON.stringify(r))};
+
+function vOrden(){
+  if(!draft)draft=newDraft();
+  const o=draft, orig=editingId&&S.orders.find(x=>x.id===editingId);
+  $('#app').innerHTML=`
+  <section class="card">
+    <div class="row" style="justify-content:space-between"><h2>Orden de trabajo Nº <span class="num" id="numBox">${editingId?o.num:'(se asigna al guardar)'}</span>${editingId?' · editando':''}</h2>
+      <button class="btn sm" id="bNueva">Empezar una nueva</button></div>
+    ${orig&&ejecutada(orig)?'<p class="hint">Esta orden ya está cerrada. Lo que cambies acá no toca los datos del cierre.</p>':''}
+    <div class="grid">
+      <label>Fecha<input type="date" id="f_fecha" value="${esc(o.fecha)}"></label>
+      <label>Potrero / lote${selLista('id="f_potrero"','potrero',o.potrero)}</label>
+      <label>Cultivo${selLista('id="f_cultivo"','cultivo',o.cultivo)}</label>
+    </div>
+  </section>
+  <section class="card">
+    <h2>Labor</h2>
+    <div class="grid">
+      <label>Tipo de labor<select id="f_labor">${opt(LABORES.map(x=>[x,x]),o.labor)}</select></label>
+      <label>Contratista${selLista('id="f_contratista"','contratista',o.contratista)}</label>
+      <label>Operario<input id="f_operario" value="${esc(o.operario)}"></label>
+      <label>Precio labor (USD/ha)<input id="f_precio" inputmode="decimal" value="${esc(o.precio)}"></label>
+      <label>Superficie (ha)<input id="f_sup" inputmode="decimal" value="${esc(o.sup)}"></label>
+      <label>Caudal (L de caldo/ha)<input id="f_caudal" inputmode="decimal" value="${esc(o.caudal)}"></label>
+      <label>Capacidad del tanque (L)<input id="f_tanque" inputmode="decimal" value="${esc(o.tanque)}"></label>
+    </div>
+    <div class="calc" id="calcBox"></div>
+  </section>
+  <section class="card">
+    <div class="row" style="justify-content:space-between"><h2>Productos</h2><button class="btn sm" id="bAddItem">+ Agregar producto</button></div>
+    <div class="items" id="items"></div>
+    <p class="hint">El orden de carga se arma solo según la formulación. Las dosis siempre de acuerdo a la etiqueta o al técnico.</p>
+  </section>
+  <section class="card"><h2>Orden de carga del tanque</h2><ol class="mix" id="mix"></ol></section>
+  <section class="card">
+    <label>Observaciones para el operario<textarea id="f_obs">${esc(o.obs)}</textarea></label>
+    <div class="row">
+      <button class="btn primary" id="bGuardar">Guardar orden</button>
+      <button class="btn accent" id="bPDF">Guardar y descargar PDF</button>
+    </div>
+  </section>`;
+  ['fecha','labor','operario','precio','sup','caudal','tanque','obs'].forEach(k=>{
+    $('#f_'+k).addEventListener('input',e=>{o[k]=e.target.value;updCalc()});
+  });
+  ['potrero','cultivo','contratista'].forEach(k=>bindLista($('#f_'+k),k,v=>{o[k]=v}));
+  $('#bNueva').onclick=()=>{draft=newDraft();editingId=null;render()};
+  $('#bAddItem').onclick=()=>{o.items.push({prod:'',comercial:'',form:'SL',dosis:'',unidad:'L/ha'});renderItems();updCalc()};
+  $('#bGuardar').onclick=async()=>{if(await saveDraft())toast('Orden guardada')};
+  $('#bPDF').onclick=async()=>{const ord=await saveDraft();if(ord)makePDF(ord)};
+  renderItems();updCalc();
+}
+function renderItems(){
+  const o=draft;
+  $('#items').innerHTML=o.items.map((it,i)=>`
+   <div class="item" data-i="${i}">
+     <div class="g">
+       <label>Producto (principio activo)${selLista('data-p','producto',it.prod)}</label>
+       <label>Nombre comercial<input data-k="comercial" value="${esc(it.comercial)}"></label>
+       <label>Formulación<select data-k="form">${opt(Object.entries(FORMS).map(([k,v])=>[k,v.l]),it.form)}</select></label>
+       <label>Dosis<input data-k="dosis" inputmode="decimal" value="${esc(it.dosis)}"></label>
+       <label>Unidad<select data-k="unidad">${opt(Object.keys(UNITS).map(u=>[u,u]),it.unidad)}</select></label>
+     </div>
+     <div class="row" style="justify-content:space-between">
+       <div class="res" data-res></div>
+       <button class="btn sm danger" data-del>Quitar</button>
+     </div>
+   </div>`).join('');
+  $('#items').querySelectorAll('.item').forEach(el=>{
+    const i=+el.dataset.i;
+    el.querySelectorAll('[data-k]').forEach(inp=>{
+      inp.addEventListener('input',e=>{
+        const k=inp.dataset.k;o.items[i][k]=e.target.value;
+        updCalc();
+      });
+    });
+    bindLista(el.querySelector('[data-p]'),'producto',v=>{
+      o.items[i].prod=v;const p=S.products.find(p=>norm(p.nombre)===norm(v));
+      if(p&&p.form){Object.assign(o.items[i],{comercial:p.comercial||o.items[i].comercial,form:p.form,unidad:p.unidad});
+        el.querySelector('[data-k=comercial]').value=o.items[i].comercial;
+        el.querySelector('[data-k=form]').value=p.form;el.querySelector('[data-k=unidad]').value=p.unidad;}
+      updCalc()},()=>({form:o.items[i].form,unidad:o.items[i].unidad,comercial:o.items[i].comercial}));
+    el.querySelector('[data-del]').onclick=()=>{o.items.splice(i,1);renderItems();updCalc()};
+  });
+}
+function updCalc(){
+  if(!$('#calcBox'))return;
+  const c=calc(draft), P=precios(S.compras), st=stockCampo();
+  /* lo que esta misma orden ya tiene comprometido no se cuenta dos veces */
+  const propia={};const orig=editingId&&S.orders.find(x=>x.id===editingId);
+  if(orig&&!ejecutada(orig))consumo(orig).forEach(i=>propia[i.key]=(propia[i.key]||0)+i.cant);
+  let ins=0,sinPrecio=0;
+  $('#items').querySelectorAll('.item').forEach(el=>{
+    const it=draft.items[+el.dataset.i];const u=UNITS[it.unidad]||UNITS['L/ha'];
+    const tot=n(it.dosis)*c.sup*u.f, key=keyOf(it.prod,u.b), pu=P(CID,key), s=st[key];
+    if(it.prod&&tot){if(pu!=null)ins+=pu*tot;else sinPrecio++}
+    let stk='';
+    if(it.prod){
+      const disp=s?s.disp+(propia[key]||0):0;
+      stk=` · Stock disponible: <b class="num ${disp<tot?'neg':''}">${fmt(disp)} ${u.b}</b>${tot>disp?` <span class="warn">faltan ${fmt(tot-disp)} ${u.b}</span>`:''}`;
+    }
+    el.querySelector('[data-res]').innerHTML=`Total: <b class="num">${fmt(tot)} ${u.b}</b> · Por tanque lleno: <b class="num">${fmt(n(it.dosis)*c.haTq*u.f)} ${u.b}</b>${stk}${pu!=null&&tot?` · ≈ USD <b class="num">${fmt(pu*tot,0)}</b>`:''}`;
+  });
+  const lab=n(draft.precio)*c.sup;
+  $('#calcBox').innerHTML=`
+    <div><b>${fmt(c.haTq,1)}</b><span>ha por tanque</span></div>
+    <div><b>${fmt(c.tanques,1)}</b><span>tanques (${c.llenos} llenos${c.resto>0.01?` + 1 de ${fmt(c.ultimoL,0)} L`:''})</span></div>
+    <div><b>${fmt(c.agua,0)}</b><span>litros de caldo en total</span></div>
+    <div><b>${fmt(lab,0)}</b><span>costo labor (USD)</span></div>
+    <div><b>${fmt(ins,0)}</b><span>costo insumos (USD)${sinPrecio?` · ${sinPrecio} sin precio`:''}</span></div>
+    <div><b>${c.sup?fmt((ins+lab)/c.sup,1):'-'}</b><span>costo total USD/ha</span></div>`;
+  $('#mix').innerHTML=mixSteps(c).map((s,i)=>`<li><span class="step">${i+1}</span><div><b>${esc(s.t)}</b>${s.d?`<div class="hint">${esc(s.d)}</div>`:''}</div></li>`).join('');
+}
+function mixSteps(c){
+  const s=[{t:'Agua: llenar el tanque hasta la mitad',d:'Agua limpia y empezar la agitación.'}];
+  c.items.forEach(i=>s.push({t:`${i.prod||'Producto'}${i.comercial?' ('+i.comercial+')':''}: ${fmt(i.porTq)} ${i.base} por tanque lleno`,d:(FORMS[i.form]||FORMS.OTRO).r+notaProd(i.prod)}));
+  s.push({t:'Agua: completar el tanque',d:'Mantener la agitación hasta terminar la aplicación.'});
+  return s;
+}
+function notaProd(name){const p=S.products.find(p=>norm(p.nombre)===norm(name));return p&&p.nota?' '+p.nota:''}
+function agregarAlCatalogo(lista){
+  lista.forEach(i=>{if(i.prod&&!S.products.some(p=>norm(p.nombre)===norm(i.prod))){
+    S.products.push({nombre:i.prod,form:i.form||'OTRO',unidad:i.unidad});   // evita duplicar antes de que vuelva el dato
+    db.collection('productos').add({nombre:i.prod.trim(),comercial:i.comercial||'',form:i.form||'OTRO',unidad:i.unidad,nota:'',precio:'',creadoPor:quien()})}});
+}
+
+let guardando=false;
+async function saveDraft(){
+  if(guardando)return null;
+  const o=draft;
+  if(!n(o.sup)){toast('Falta la superficie');return null}
+  if(!o.items.some(i=>i.prod)){toast('Agregá al menos un producto');return null}
+  guardando=true;
+  try{
+    const rec=limpio(o);rec.items=rec.items.filter(i=>i.prod);
+    rec.campoId=CID;rec.campoNombre=campo().nombre||'';
+    if(editingId){
+      await db.collection('ordenes').doc(editingId).update({...rec,editadoPor:quien(),editadoEn:TS()});
+      rec.id=editingId;rec.estado=(S.orders.find(x=>x.id===editingId)||{}).estado||'Planificada';
+    }else{
+      rec.estado='Planificada';
+      const ref=db.collection('ordenes').doc(), cRef=db.collection('campos').doc(CID);
+      try{
+        rec.num=await Promise.race([db.runTransaction(async t=>{
+          const d=await t.get(cRef);const num=(d.exists&&d.data().next)||1;
+          t.set(cRef,{next:num+1},{merge:true});
+          t.set(ref,{...rec,num,creadoPor:quien(),creadoEn:TS(),borrado:false});return num}),
+          new Promise((_,r)=>setTimeout(()=>r(new Error('sin señal')),8000))]);
+      }catch(x){
+        if(x&&x.code==='permission-denied')throw x;
+        // Sin señal: se numera con lo que hay en el aparato y se sincroniza al volver la conexión
+        rec.num=Math.max(campo().next||1,...S.orders.map(x=>(+x.num||0)+1));
+        ref.set({...rec,creadoPor:quien(),creadoEn:TS(),borrado:false,sinSenal:true});
+        cRef.set({next:rec.num+1},{merge:true});
+        toast('Guardada sin señal. Se sube sola al volver la conexión.');
+      }
+      rec.id=ref.id;editingId=ref.id;draft.num=rec.num;$('#numBox')&&($('#numBox').textContent=rec.num);
+    }
+    agregarAlCatalogo(rec.items);
+    return rec;
+  }catch(x){toast(x.code==='permission-denied'?'No tenés permiso para guardar':'No se pudo guardar. Probá de nuevo.');return null}
+  finally{guardando=false}
+}
+
+/* ---------- Historial ---------- */
+let F={q:'',contratista:'',estado:'',desde:'',hasta:'',papelera:false}, confirmDel=null;
+function filtered(){
+  return S.orders.filter(o=>(!!o.borrado===F.papelera)&&(!F.contratista||o.contratista===F.contratista)&&(!F.estado||o.estado===F.estado)
+    &&(!F.desde||o.fecha>=F.desde)&&(!F.hasta||o.fecha<=F.hasta)
+    &&(!F.q||JSON.stringify(o).toLowerCase().includes(F.q.toLowerCase()))).sort((a,b)=>(+b.num||0)-(+a.num||0));
+}
+function vHist(){
+  const foco=document.activeElement&&document.activeElement.id;
+  const contr=[...new Set(activas().map(o=>o.contratista).filter(Boolean))].sort();
+  const list=filtered(), P=precios(S.compras);
+  const ha=list.reduce((a,o)=>a+haReal(o),0), usd=list.reduce((a,o)=>a+costos(o,P).tot,0);
+  const nb=S.orders.filter(o=>o.borrado).length;
+  $('#app').innerHTML=`
+  <section class="card">
+    <div class="row" style="justify-content:space-between"><h2>${F.papelera?'Papelera':'Filtros'}</h2>
+      <button class="btn sm" id="bPap">${F.papelera?'Volver a las órdenes':`Papelera (${nb})`}</button></div>
+    <div class="grid">
+      <label>Contratista<select id="h_contratista"><option value="">Todos</option>${opt(contr.map(x=>[x,x]),F.contratista)}</select></label>
+      <label>Estado<select id="h_estado"><option value="">Todos</option>${opt([['Planificada','Planificada'],['Ejecutada','Ejecutada']],F.estado)}</select></label>
+      <label>Desde<input type="date" id="h_desde" value="${F.desde}"></label>
+      <label>Hasta<input type="date" id="h_hasta" value="${F.hasta}"></label>
+      <label>Buscar<input id="h_q" placeholder="potrero, producto…" value="${esc(F.q)}"></label>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      <span class="hint">${list.length} órdenes · <span class="num">${fmt(ha,1)}</span> ha · costo total <span class="num">USD ${fmt(usd,0)}</span></span>
+      ${F.papelera?'':'<button class="btn accent" id="bXLS">Descargar Excel de esta lista</button>'}
+    </div>
+  </section>
+  <section class="card">
+    ${confirmDel?`<div class="confirm">¿Mandar la orden Nº ${S.orders.find(o=>o.id===confirmDel)?.num} a la papelera? <button class="btn sm danger" id="cSi">Sí</button><button class="btn sm" id="cNo">Cancelar</button></div>`:''}
+    ${list.length?`<div class="olist">${list.map(o=>{const k=costos(o,P);return`<div class="oc">
+        <div class="row" style="justify-content:space-between">
+          <b>Nº <span class="num">${o.num}</span> · ${esc(o.potrero||'-')}</b>
+          <span class="pill ${ejecutada(o)?'ok':'plan'}">${esc(o.estado||'Planificada')}</span></div>
+        <div class="hint"><span class="num">${fmtDate(o.fecha)}</span> · ${esc(o.labor)} · <span class="num">${fmt(n(o.sup),1)} ha</span>${ejecutada(o)&&o.cierre?` · hecha el <span class="num">${fmtDate(o.cierre.fecha)}</span>, <span class="num">${fmt(k.ha,1)} ha</span>`:''}</div>
+        <div>${esc(o.contratista||'Sin contratista')}</div>
+        <div class="hint">${esc((o.items||[]).map(i=>i.prod).join(', '))}</div>
+        <div class="hint">Costo ${ejecutada(o)?'real':'estimado'}: <b class="money">USD ${fmt(k.tot,0)}</b> · <span class="money">${fmt(k.porHa,1)} USD/ha</span>${k.falta?` · <span class="warn">${k.falta} producto${k.falta>1?'s':''} sin precio</span>`:''}</div>
+        <div class="who">Cargó ${esc(corto(o.creadoPor))}${o.editadoPor?' · editó '+esc(corto(o.editadoPor)):''}${o.cierre&&o.cierre.cerradoPor?' · cerró '+esc(corto(o.cierre.cerradoPor)):''}${o.borrado?' · borró '+esc(corto(o.borradoPor)):''}</div>
+        <div class="row">${F.papelera?`<button class="btn sm" data-a="rest" data-id="${o.id}">Restaurar</button>`:`
+          ${ejecutada(o)?`<button class="btn sm" data-a="cerrar" data-id="${o.id}">Ver cierre</button>`:`<button class="btn sm primary" data-a="cerrar" data-id="${o.id}">Cerrar orden</button>`}
+          <button class="btn sm" data-a="pdf" data-id="${o.id}">PDF</button>
+          <button class="btn sm" data-a="edit" data-id="${o.id}">Editar</button>
+          <button class="btn sm" data-a="dup" data-id="${o.id}">Duplicar</button>
+          <button class="btn sm danger" data-a="del" data-id="${o.id}">Borrar</button>`}</div></div>`}).join('')}</div>`
+      :`<div class="empty">${F.papelera?'La papelera está vacía.':`Todavía no hay órdenes en este campo${S.orders.length?' con estos filtros':''}. Se crean desde “Nueva orden”.`}</div>`}
+  </section>`;
+  ['contratista','estado','desde','hasta'].forEach(k=>$('#h_'+k).onchange=e=>{F[k]=e.target.value;vHist()});
+  $('#h_q').oninput=e=>{F.q=e.target.value;clearTimeout(window._qt);window._qt=setTimeout(vHist,350)};
+  if(foco==='h_q'){const q=$('#h_q');q.focus();q.setSelectionRange(q.value.length,q.value.length)}
+  $('#bPap').onclick=()=>{F.papelera=!F.papelera;confirmDel=null;vHist()};
+  if($('#bXLS'))$('#bXLS').onclick=()=>excelCompleto(list,S.compras,{titulo:'Órdenes filtradas',filtros:descFiltros(F),desde:F.desde,hasta:F.hasta,todasOrdenes:S.orders});
+  const upd=(id,d)=>db.collection('ordenes').doc(id).update(d).catch(()=>toast('No se pudo guardar el cambio'));
+  if(confirmDel){$('#cSi').onclick=()=>{upd(confirmDel,{borrado:true,borradoPor:quien(),borradoEn:TS()});confirmDel=null;toast('Orden enviada a la papelera')};$('#cNo').onclick=()=>{confirmDel=null;vHist()}}
+  document.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{
+    const o=S.orders.find(x=>x.id===b.dataset.id);const a=b.dataset.a;
+    if(a==='pdf')makePDF(o);
+    if(a==='cerrar'){cierreId=o.id;tab='cierre';render();scrollTo(0,0)}
+    if(a==='edit'){draft=limpio(o);editingId=o.id;tab='orden';render()}
+    if(a==='dup'){draft=limpio(o);draft.num=null;draft.fecha=today();editingId=null;tab='orden';render();toast('Copia lista para editar')}
+    if(a==='del'){confirmDel=o.id;vHist()}
+    if(a==='rest'){upd(o.id,{borrado:false,editadoPor:quien(),editadoEn:TS()});toast('Orden restaurada')}
+  });
+}
+function descFiltros(f){
+  const p=[];if(f.desde)p.push('desde '+fmtDate(f.desde));if(f.hasta)p.push('hasta '+fmtDate(f.hasta));
+  if(f.contratista)p.push('contratista '+f.contratista);if(f.estado)p.push('estado '+f.estado);if(f.q)p.push('búsqueda "'+f.q+'"');
+  return p.length?p.join(', '):'Sin filtros (todas)';
+}
+
+/* ---------- Cerrar orden con lo que se hizo de verdad ---------- */
+let reabrirConf=false;
+function vCierre(){
+  const o=S.orders.find(x=>x.id===cierreId);
+  if(!o){tab='historial';vHist();return}
+  const ci=o.cierre||{}, items=consumo({...o,estado:'Planificada'}), us=ci.usado||{};
+  const ya=ejecutada(o);
+  $('#app').innerHTML=`
+  <section class="card">
+    <div class="row" style="justify-content:space-between"><h2>${ya?'Cierre de la':'Cerrar la'} orden Nº <span class="num">${o.num}</span> · ${esc(o.potrero||'')}</h2>
+      <button class="btn sm" id="bVolver">Volver al historial</button></div>
+    <p class="hint">${esc(o.labor)} · ${esc(o.contratista||'Sin contratista')} · planificada para el ${fmtDate(o.fecha)} en <span class="num">${fmt(n(o.sup),2)} ha</span></p>
+    <div class="grid">
+      <label>Fecha en que se hizo<input type="date" id="c_fecha" value="${esc(ci.fecha||today())}"></label>
+      <label>Hora de inicio<input type="time" id="c_hIni" value="${esc(ci.hIni||'')}"></label>
+      <label>Hora de fin<input type="time" id="c_hFin" value="${esc(ci.hFin||'')}"></label>
+      <label>Hectáreas hechas<input id="c_ha" inputmode="decimal" value="${esc(ci.ha??o.sup)}"></label>
+      <label>Operario<input id="c_operario" value="${esc(ci.operario??o.operario)}"></label>
+      <label>Viento (km/h)<input id="c_viento" inputmode="decimal" value="${esc(ci.viento||'')}"></label>
+      <label>Temperatura (°C)<input id="c_temp" inputmode="decimal" value="${esc(ci.temp||'')}"></label>
+      <label>Humedad (%)<input id="c_hum" inputmode="decimal" value="${esc(ci.hum||'')}"></label>
+    </div>
+  </section>
+  <section class="card">
+    <h2>Producto usado de verdad</h2>
+    <p class="hint">Viene cargado con lo planificado. Corregí lo que se haya usado distinto. Esto es lo que se descuenta del depósito.</p>
+    <div class="usos">${items.map((i,k)=>`
+      <div class="uso">
+        <div><div class="p">${esc(i.prod)}</div><div class="pl">Planificado: <span class="num">${fmt(i.plan)} ${i.base}</span></div></div>
+        <label>Usado (${i.base})<input data-u="${k}" inputmode="decimal" value="${esc(us[i.key]!==undefined?us[i.key]:r3(i.plan))}"></label>
+        <div class="pl" data-dif="${k}"></div>
+      </div>`).join('')}</div>
+  </section>
+  <section class="card">
+    <label>Observaciones del cierre<textarea id="c_obs">${esc(ci.obs||'')}</textarea></label>
+    <div class="row">
+      <button class="btn primary" id="bCerrar">${ya?'Guardar cambios del cierre':'Cerrar orden como ejecutada'}</button>
+      ${ya?'<button class="btn sm danger" id="bReabrir">Reabrir orden</button>':''}
+    </div>
+    ${reabrirConf?`<div class="confirm">¿Reabrir la orden? Vuelve a planificada y se borran los datos del cierre. <button class="btn sm danger" id="rSi">Sí, reabrir</button><button class="btn sm" id="rNo">Cancelar</button></div>`:''}
+  </section>`;
+  const dif=()=>items.forEach((i,k)=>{const v=n($(`[data-u="${k}"]`).value),d=v-i.plan;
+    $(`[data-dif="${k}"]`).innerHTML=Math.abs(d)<0.005?'Igual a lo planificado':`<span class="${d>0?'neg':''}">${d>0?'+':''}${fmt(d)} ${i.base} (${fmt(i.plan?d/i.plan*100:0,0)}%)</span>`});
+  document.querySelectorAll('[data-u]').forEach(x=>x.oninput=dif);dif();
+  $('#bVolver').onclick=()=>{reabrirConf=false;tab='historial';render()};
+  $('#bCerrar').onclick=async()=>{
+    const fecha=$('#c_fecha').value;if(!fecha){toast('Falta la fecha en que se hizo');return}
+    if(!n($('#c_ha').value)){toast('Faltan las hectáreas hechas');return}
+    const usado={};items.forEach((i,k)=>usado[i.key]=r3(n($(`[data-u="${k}"]`).value)));
+    const cierre={fecha,hIni:$('#c_hIni').value,hFin:$('#c_hFin').value,ha:n($('#c_ha').value),operario:$('#c_operario').value.trim(),
+      viento:$('#c_viento').value.trim(),temp:$('#c_temp').value.trim(),hum:$('#c_hum').value.trim(),obs:$('#c_obs').value,usado,
+      cerradoPor:ci.cerradoPor||quien(),cerradoEn:ci.cerradoEn||new Date().toISOString(),...(ya?{editadoPor:quien()}:{})};
+    try{await db.collection('ordenes').doc(o.id).update({estado:'Ejecutada',cierre,editadoPor:quien(),editadoEn:TS()});
+      toast(ya?'Cierre actualizado':'Orden cerrada');tab='historial';render()}
+    catch(x){toast('No se pudo guardar el cierre')}
+  };
+  if($('#bReabrir'))$('#bReabrir').onclick=()=>{reabrirConf=true;vCierre()};
+  if(reabrirConf){
+    $('#rNo').onclick=()=>{reabrirConf=false;vCierre()};
+    $('#rSi').onclick=async()=>{reabrirConf=false;
+      try{await db.collection('ordenes').doc(o.id).update({estado:'Planificada',cierre:BORRAR(),editadoPor:quien(),editadoEn:TS()});toast('Orden reabierta');tab='historial';render()}
+      catch(x){toast('No se pudo reabrir')}};
+  }
+}
+
+/* ---------- Depósito: stock, facturas de compra y ajustes ---------- */
+let confirmCompra=null;
+function vDep(){
+  const P=precios(S.compras), st=stock(S.orders,S.compras,P);
+  const valor=st.reduce((a,r)=>a+r.valor,0);
+  const comp=S.compras.filter(c=>!c.borrado).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  const totalUSD=c=>{const tc=c.moneda==='PES'?n(c.cotizacion):1;const t=(c.items||[]).reduce((a,i)=>a+n(i.importe),0);return tc?t/tc:0};
+  $('#app').innerHTML=`
+  <section class="card">
+    <div class="row" style="justify-content:space-between"><h2>Stock en el depósito</h2><button class="btn sm" id="bXStock">Excel</button></div>
+    <div class="row">
+      <button class="btn accent" id="bNuevaCompra">Cargar factura de compra</button>
+      <button class="btn" id="bNuevoAjuste">Ajuste de stock</button>
+    </div>
+    <p class="hint">Entra lo comprado y los ajustes. Sale lo usado en las órdenes cerradas. "Comprometido" es lo que piden las órdenes planificadas. Valor del stock: <b class="money">USD ${fmt(valor,0)}</b></p>
+    ${st.length?`<div class="tablewrap"><table>
+      <thead><tr><th>Producto</th><th>Unidad</th><th class="r">Entradas</th><th class="r">Usado</th><th class="r">Stock actual</th><th class="r">Comprometido</th><th class="r">Disponible</th><th class="r">Precio prom. USD</th><th class="r">Valor USD</th></tr></thead>
+      <tbody>${st.map(r=>`<tr><td>${esc(r.prod)}</td><td>${r.base}</td><td class="r">${fmt(r.entra)}</td><td class="r">${fmt(r.sale)}</td>
+        <td class="r ${r.actual<-0.001?'neg':''}"><b>${fmt(r.actual)}</b></td><td class="r">${fmt(r.comp)}</td><td class="r ${r.disp<-0.001?'neg':''}">${fmt(r.disp)}</td>
+        <td class="r">${r.pu!=null?fmt(r.pu,2):'-'}</td><td class="r">${r.valor?fmt(r.valor,0):'-'}</td></tr>`).join('')}</tbody></table></div>`
+      :'<div class="empty">Todavía no hay movimientos. Cargá una factura o hacé un ajuste con lo que tenés hoy en el depósito.</div>'}
+  </section>
+  <section class="card">
+    <h2>Facturas y ajustes</h2>
+    ${confirmCompra?`<div class="confirm">¿Borrar este movimiento? Deja de contar para el stock y los costos. <button class="btn sm danger" id="ccSi">Sí, borrar</button><button class="btn sm" id="ccNo">Cancelar</button></div>`:''}
+    ${comp.length?`<div class="olist">${comp.map(c=>`<div class="oc">
+      <div class="row" style="justify-content:space-between"><b>${c.tipo==='ajuste'?'Ajuste de stock':esc(c.proveedor||'Factura')}</b><span class="pill ${c.tipo==='ajuste'?'plan':'ok'}">${c.tipo==='ajuste'?'Ajuste':'Compra'}</span></div>
+      <div class="hint"><span class="num">${fmtDate(c.fecha)}</span>${c.numero?' · Nº '+esc(c.numero):''}${c.tipo!=='ajuste'?` · <span class="money">USD ${fmt(totalUSD(c),0)}</span>${c.moneda==='PES'?` (pesos a ${fmt(n(c.cotizacion),2)})`:''}`:''}</div>
+      <div class="hint">${esc((c.items||[]).map(i=>`${i.prod} ${fmt(n(i.cantidad))} ${i.unidad}`).join(', '))}</div>
+      ${c.foto?`<img class="thumb" src="${c.foto}" alt="Foto de la factura" data-foto="${c.id}">`:''}
+      <div class="who">Cargó ${esc(corto(c.creadoPor))}${c.editadoPor?' · editó '+esc(corto(c.editadoPor)):''}</div>
+      <div class="row"><button class="btn sm" data-ce="${c.id}">Ver / editar</button><button class="btn sm danger" data-cb="${c.id}">Borrar</button></div>
+    </div>`).join('')}</div>`:'<div class="empty">No hay facturas cargadas en este campo.</div>'}
+  </section>`;
+  $('#bNuevaCompra').onclick=()=>{compraDraft=nuevaCompra('compra');tab='compra';render();scrollTo(0,0)};
+  $('#bNuevoAjuste').onclick=()=>{compraDraft=nuevaCompra('ajuste');tab='compra';render();scrollTo(0,0)};
+  $('#bXStock').onclick=()=>{const H=hojasDeposito(S.orders,S.compras,false);descargar([H.stock],`stock-${slug(campo().nombre)}-${today()}.xlsx`)};
+  document.querySelectorAll('[data-foto]').forEach(i=>i.onclick=()=>verFoto(i.src));
+  document.querySelectorAll('[data-ce]').forEach(b=>b.onclick=()=>{const c=S.compras.find(x=>x.id===b.dataset.ce);compraDraft=JSON.parse(JSON.stringify(c));tab='compra';render();scrollTo(0,0)});
+  document.querySelectorAll('[data-cb]').forEach(b=>b.onclick=()=>{confirmCompra=b.dataset.cb;vDep()});
+  if(confirmCompra){
+    $('#ccNo').onclick=()=>{confirmCompra=null;vDep()};
+    $('#ccSi').onclick=()=>{db.collection('compras').doc(confirmCompra).update({borrado:true,borradoPor:quien(),borradoEn:TS()}).catch(()=>toast('No se pudo borrar'));confirmCompra=null;toast('Movimiento borrado')};
+  }
+}
+function verFoto(src){const m=document.createElement('div');m.className='modal';m.innerHTML=`<img src="${src}" alt="Factura">`;m.onclick=()=>m.remove();document.body.appendChild(m)}
+const nuevaLinea=()=>({prod:'',cantidad:'',unidad:'L',importe:''});
+function nuevaCompra(tipo){return{tipo,fecha:today(),proveedor:'',numero:'',moneda:'USD',cotizacion:'',foto:'',qr:null,obs:'',motivo:'Inventario inicial',items:[nuevaLinea()]}}
+function vCompra(){
+  const c=compraDraft;if(!c){tab='deposito';vDep();return}
+  const aj=c.tipo==='ajuste';
+  $('#app').innerHTML=`
+  <section class="card">
+    <div class="row" style="justify-content:space-between"><h2>${c.id?'Editar':(aj?'Nuevo':'Nueva')} ${aj?'ajuste de stock':'factura de compra'}</h2>
+      <button class="btn sm" id="bVolverDep">Volver al depósito</button></div>
+    ${c.id?'':`<div class="seg"><button data-t="compra" class="${aj?'':'on'}">Factura de compra</button><button data-t="ajuste" class="${aj?'on':''}">Ajuste de stock</button></div>`}
+    <div class="grid">
+      <label>Fecha<input type="date" id="k_fecha" value="${esc(c.fecha)}"></label>
+      ${aj?`<label>Motivo<select id="k_motivo">${opt(['Inventario inicial','Corrección de inventario','Pérdida o rotura','Traspaso','Otro'].map(x=>[x,x]),c.motivo)}</select></label>`:`
+      <label>Proveedor<input id="k_proveedor" value="${esc(c.proveedor)}"></label>
+      <label>Nº de factura<input id="k_numero" value="${esc(c.numero)}"></label>
+      <label>Moneda<select id="k_moneda">${opt([['USD','Dólares (USD)'],['PES','Pesos']],c.moneda)}</select></label>
+      <label ${c.moneda==='PES'?'':'hidden'} id="lbCot">Cotización (pesos por dólar)<input id="k_cotizacion" inputmode="decimal" value="${esc(c.cotizacion)}"></label>`}
+    </div>
+    ${aj?'<p class="hint">Para cargar lo que ya tenés en el depósito, poné cada producto con su cantidad. Para descontar, poné la cantidad en negativo (por ejemplo -20). El importe es opcional y sirve para el costo.</p>':`
+    <div class="row">
+      <label class="btn" style="display:inline-block">Sacar foto o elegir imagen de la factura<input type="file" id="k_foto" accept="image/*" hidden></label>
+      ${c.foto?`<img class="thumb" src="${c.foto}" alt="Foto de la factura" id="k_thumb"><button class="btn sm danger" id="k_sinFoto">Quitar foto</button>`:''}
+    </div>
+    <div class="hint" id="qrInfo">${qrTexto(c)}</div>`}
+  </section>
+  <section class="card">
+    <div class="row" style="justify-content:space-between"><h2>Productos</h2><button class="btn sm" id="bAddLin">+ Agregar línea</button></div>
+    <div class="items" id="lineas"></div>
+    <div class="hint" id="kTotal"></div>
+  </section>
+  <section class="card">
+    <label>Observaciones<textarea id="k_obs">${esc(c.obs)}</textarea></label>
+    <div class="row"><button class="btn primary" id="bGuardarCompra">Guardar</button></div>
+  </section>`;
+  document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{c.tipo=b.dataset.t;vCompra()});
+  $('#bVolverDep').onclick=()=>{compraDraft=null;tab='deposito';render()};
+  ['fecha','proveedor','numero','cotizacion','obs','motivo'].forEach(k=>{const el=$('#k_'+k);if(el)el.addEventListener('input',e=>{c[k]=e.target.value;totLineas()})});
+  if($('#k_moneda'))$('#k_moneda').onchange=e=>{c.moneda=e.target.value;$('#lbCot').hidden=c.moneda!=='PES';totLineas()};
+  if($('#k_foto'))$('#k_foto').onchange=e=>{const f=e.target.files[0];if(f)procesarFoto(f,c)};
+  if($('#k_thumb'))$('#k_thumb').onclick=()=>verFoto(c.foto);
+  if($('#k_sinFoto'))$('#k_sinFoto').onclick=()=>{c.foto='';vCompra()};
+  $('#bAddLin').onclick=()=>{c.items.push(nuevaLinea());renderLineas()};
+  $('#bGuardarCompra').onclick=guardarCompra;
+  renderLineas();
+}
+function renderLineas(){
+  const c=compraDraft;
+  $('#lineas').innerHTML=c.items.map((it,i)=>`
+    <div class="lin" data-i="${i}">
+      <label>Producto${selLista('data-p','producto',it.prod)}</label>
+      <label>Cantidad<input data-k="cantidad" inputmode="decimal" value="${esc(it.cantidad)}"></label>
+      <label>Unidad<select data-k="unidad">${opt([['L','L'],['kg','kg']],it.unidad)}</select></label>
+      <label>Importe total línea${c.tipo==='ajuste'?' (opcional)':''}<input data-k="importe" inputmode="decimal" value="${esc(it.importe)}"></label>
+      <button class="btn sm danger" data-del>Quitar</button>
+      <div class="pu" data-pu></div>
+    </div>`).join('');
+  $('#lineas').querySelectorAll('.lin').forEach(el=>{
+    const i=+el.dataset.i;
+    el.querySelectorAll('[data-k]').forEach(inp=>inp.addEventListener('input',e=>{
+      c.items[i][inp.dataset.k]=e.target.value;
+      totLineas()}));
+    bindLista(el.querySelector('[data-p]'),'producto',v=>{
+      c.items[i].prod=v;const p=S.products.find(p=>norm(p.nombre)===norm(v));
+      if(p&&p.unidad){c.items[i].unidad=(UNITS[p.unidad]||UNITS['L/ha']).b;el.querySelector('[data-k=unidad]').value=c.items[i].unidad}
+      totLineas()},()=>({unidad:c.items[i].unidad==='kg'?'kg/ha':'L/ha',form:'OTRO'}));
+    el.querySelector('[data-del]').onclick=()=>{c.items.splice(i,1);renderLineas()};
+  });
+  totLineas();
+}
+function totLineas(){
+  const c=compraDraft;if(!c||!$('#kTotal'))return;
+  const tc=c.moneda==='PES'?n(c.cotizacion):1, mon=c.moneda==='PES'?'$':'USD';
+  let tot=0;
+  $('#lineas').querySelectorAll('.lin').forEach(el=>{
+    const it=c.items[+el.dataset.i], q=n(it.cantidad), imp=n(it.importe);tot+=imp;
+    el.querySelector('[data-pu]').innerHTML=q&&imp?`Precio unitario: <b class="money">${mon} ${fmt(imp/q,2)}</b> por ${it.unidad}${c.moneda==='PES'&&tc?` · <b class="money">USD ${fmt(imp/q/tc,2)}</b>`:''}`:'';
+  });
+  $('#kTotal').innerHTML=c.tipo==='ajuste'&&!tot?'':`Total de las líneas: <b class="money">${mon} ${fmt(tot,2)}</b>${c.moneda==='PES'?(tc?` = <b class="money">USD ${fmt(tot/tc,2)}</b>`:' <span class="warn">falta la cotización</span>'):''}`+
+    (c.qr&&c.qr.total?` · Total según el QR: <b class="money">${fmt(c.qr.total,2)}</b>${Math.abs(c.qr.total-tot)>0.5?' <span class="warn">no coincide</span>':''}`:'');
+}
+async function guardarCompra(){
+  const c=compraDraft;
+  const items=c.items.filter(i=>i.prod.trim()&&n(i.cantidad)).map(i=>({prod:i.prod.trim(),cantidad:n(i.cantidad),unidad:i.unidad,importe:i.importe===''?'':n(i.importe)}));
+  if(!c.fecha){toast('Falta la fecha');return}
+  if(!items.length){toast('Agregá al menos un producto con su cantidad');return}
+  if(c.tipo!=='ajuste'&&items.some(i=>i.cantidad<0)){toast('En una factura las cantidades van en positivo');return}
+  if(c.tipo!=='ajuste'&&c.moneda==='PES'&&!n(c.cotizacion)){toast('Falta la cotización del dólar');return}
+  const rec={tipo:c.tipo,fecha:c.fecha,obs:c.obs||'',items,campoId:CID,campoNombre:campo().nombre||''};
+  if(c.tipo==='ajuste')Object.assign(rec,{motivo:c.motivo||'',moneda:'USD',cotizacion:'',proveedor:'',numero:'',foto:''});
+  else Object.assign(rec,{proveedor:c.proveedor.trim(),numero:c.numero.trim(),moneda:c.moneda,cotizacion:c.moneda==='PES'?n(c.cotizacion):'',foto:c.foto||'',qr:c.qr||null});
+  try{
+    if(c.id)await db.collection('compras').doc(c.id).update({...rec,editadoPor:quien(),editadoEn:TS()});
+    else await db.collection('compras').add({...rec,creadoPor:quien(),creadoEn:TS(),borrado:false});
+    agregarAlCatalogo(items.map(i=>({prod:i.prod,unidad:i.unidad==='kg'?'kg/ha':'L/ha',form:'OTRO'})));
+    toast('Guardado');compraDraft=null;tab='deposito';render();
+  }catch(x){toast(x.code==='permission-denied'?'No tenés permiso para guardar':'No se pudo guardar. Probá de nuevo.')}
+}
+
+/* Foto de la factura: se achica para guardarla y se busca el código QR */
+function procesarFoto(file,c){
+  const img=new Image();
+  img.onload=async()=>{
+    const big=Math.min(1,1800/Math.max(img.width,img.height));
+    const cv=document.createElement('canvas');cv.width=Math.round(img.width*big);cv.height=Math.round(img.height*big);
+    const cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,cv.width,cv.height);cx.drawImage(img,0,0,cv.width,cv.height);
+    const txt=await buscarQR(cv);
+    const sm=Math.min(1,1100/Math.max(cv.width,cv.height));const c2=document.createElement('canvas');
+    c2.width=Math.round(cv.width*sm);c2.height=Math.round(cv.height*sm);c2.getContext('2d').drawImage(cv,0,0,c2.width,c2.height);
+    let q=.72,data=c2.toDataURL('image/jpeg',q);while(data.length>700000&&q>.3){q-=.12;data=c2.toDataURL('image/jpeg',q)}
+    c.foto=data;
+    if(txt){const r=leerQR(txt);c.qr=r;
+      if(r.fecha)c.fecha=r.fecha;if(r.numero&&!c.numero)c.numero=r.numero;if(r.emisor&&!c.proveedor)c.proveedor=r.emisor;
+      if(r.moneda)c.moneda=r.moneda;if(r.cotizacion&&r.moneda==='PES')c.cotizacion=r.cotizacion;
+      toast('Se leyó el código QR de la factura')}
+    else{c.qr=null;toast('Foto guardada. No se encontró código QR')}
+    vCompra();
+  };
+  img.onerror=()=>toast('No se pudo abrir la imagen');
+  img.src=URL.createObjectURL(file);
+}
+async function buscarQR(cv){
+  try{if('BarcodeDetector' in window){const d=new BarcodeDetector({formats:['qr_code']});const r=await d.detect(cv);if(r&&r[0])return r[0].rawValue}}catch(e){}
+  if(!window.jsQR)return null;
+  for(const esc2 of [1,.6,.4]){
+    const w=Math.round(cv.width*esc2),h=Math.round(cv.height*esc2);const t=document.createElement('canvas');t.width=w;t.height=h;
+    const tx=t.getContext('2d');tx.drawImage(cv,0,0,w,h);const id=tx.getImageData(0,0,w,h);
+    const r=jsQR(id.data,w,h,{inversionAttempts:'attemptBoth'});if(r&&r.data)return r.data;
+  }
+  return null;
+}
+/* Entiende el QR de la factura electrónica de DGI (Uruguay) y el de AFIP (Argentina) */
+function leerQR(txt){
+  const r={texto:txt};
+  try{
+    if(/afip\.gob\.ar/i.test(txt)){
+      const p=new URL(txt).searchParams.get('p');const j=JSON.parse(atob(decodeURIComponent(p)));
+      r.fecha=j.fecha;r.numero=String(j.ptoVta).padStart(5,'0')+'-'+String(j.nroCmp).padStart(8,'0');
+      r.total=n(j.importe);r.emisor='CUIT '+j.cuit;r.moneda=j.moneda==='DOL'?'USD':'PES';if(j.ctz&&j.moneda!=='DOL')r.cotizacion='';
+      return r;
+    }
+    const q=txt.includes('?')?txt.slice(txt.indexOf('?')+1):txt;
+    const partes=decodeURIComponent(q).split(/[,&;|]/).map(s=>s.replace(/^[a-z]+=/i,'').trim());
+    partes.forEach((s,i)=>{
+      if(!r.emisor&&/^\d{12}$/.test(s))r.emisor='RUT '+s;
+      else if(!r.fecha&&/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){const[d,m,a]=s.split('/');r.fecha=`${a}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`}
+      else if(!r.fecha&&/^\d{4}-\d{2}-\d{2}$/.test(s))r.fecha=s;
+      else if(r.total==null&&/^\d+\.\d{1,2}$/.test(s))r.total=n(s);
+      else if(!r.numero&&/^[A-Z]{1,2}$/.test(s)&&/^\d+$/.test(partes[i+1]||''))r.numero=s+'-'+partes[i+1];
+    });
+  }catch(e){}
+  return r;
+}
+function qrTexto(c){
+  if(!c.qr)return c.foto?'La foto no tenía un código QR legible. Completá los datos a mano.':'Si la factura tiene código QR, la fecha, el número, el emisor y el total se completan solos.';
+  const r=c.qr;return`Datos del QR: ${[r.emisor,r.numero&&'Nº '+r.numero,r.fecha&&fmtDate(r.fecha),r.total!=null&&'total '+fmt(r.total,2)].filter(Boolean).map(esc).join(' · ')||'no se pudieron interpretar'}. Las líneas de productos se cargan a mano.`;
+}
+
+/* ---------- Informes ---------- */
+let R={desde:'',hasta:'',contratista:'',estado:''};
+function resumir(list,P){
+  const prod={},contr={},pot={},mes={},camp={};
+  let ha=0,lab=0,ins=0,ej=0,agua=0,falta=0;
+  list.forEach(o=>{
+    const k=costos(o,P),e=ejecutada(o),c=calc(o);
+    ha+=k.ha;lab+=k.lab;ins+=k.ins;agua+=c.agua;if(e)ej++;falta+=k.falta;
+    const add=(m,key,extra)=>{const r=m[key]||(m[key]={k:key,ordenes:0,ha:0,lab:0,ins:0,tot:0,porHa:0,...extra});r.ordenes++;r.ha+=k.ha;r.lab+=k.lab;r.ins+=k.ins;r.tot+=k.tot;r.porHa+=k.porHa;return r};
+    add(contr,o.contratista||'(sin contratista)');
+    const rp=add(pot,o.potrero||'(sin potrero)',{ultima:'',cultivos:new Set()});
+    const f=ejecutada(o)&&o.cierre&&o.cierre.fecha||o.fecha||'';if(f>rp.ultima)rp.ultima=f;if(o.cultivo)rp.cultivos.add(o.cultivo);
+    add(mes,(ejecutada(o)&&o.cierre&&o.cierre.fecha||o.fecha||'').slice(0,7)||'(sin fecha)');
+    add(camp,o.campoNombre||'(sin campo)');
+    k.items.forEach(i=>{
+      const r=prod[i.key]||(prod[i.key]={prod:i.prod.trim(),comercial:new Set(),base:i.base,ej:0,pl:0,usd:0,ordenes:0,ha:0});
+      if(i.comercial)r.comercial.add(i.comercial);
+      r[e?'ej':'pl']+=i.cant;r.usd+=i.costo;r.ordenes++;r.ha+=k.ha;
+    });
+  });
+  const srt=(m,f)=>Object.values(m).sort(f);
+  return {n:list.length,ha,lab,ins,tot:lab+ins,ej,agua,falta,
+    prod:srt(prod,(a,b)=>a.prod.localeCompare(b.prod)),
+    contr:srt(contr,(a,b)=>b.ha-a.ha),pot:srt(pot,(a,b)=>a.k.localeCompare(b.k,undefined,{numeric:true})),
+    mes:srt(mes,(a,b)=>a.k.localeCompare(b.k)),camp:srt(camp,(a,b)=>a.k.localeCompare(b.k))};
+}
+const nomMes=k=>{const[a,m]=k.split('-');return m?MESES[+m-1]+' '+a:k};
+const fechaReal=o=>ejecutada(o)&&o.cierre&&o.cierre.fecha||o.fecha||'';
+function filtrarR(list){return list.filter(o=>{const f=fechaReal(o);return !o.borrado&&(!R.desde||f>=R.desde)&&(!R.hasta||f<=R.hasta)
+  &&(!R.contratista||o.contratista===R.contratista)&&(!R.estado||o.estado===R.estado)})}
+function vInf(){
+  const list=filtrarR(S.orders), P=precios(S.compras), r=resumir(list,P);
+  const contr=[...new Set(activas().map(o=>o.contratista).filter(Boolean))].sort();
+  const tabla=(id,titulo,cab,filas,vacio,nota='')=>`
+    <section class="card">
+      <div class="row" style="justify-content:space-between"><h2>${titulo}</h2><button class="btn sm" data-x="${id}">Excel</button></div>
+      ${nota?`<p class="hint">${nota}</p>`:''}
+      ${filas.length?`<div class="tablewrap"><table><thead><tr>${cab.map(c=>`<th class="${c[1]||''}">${c[0]}</th>`).join('')}</tr></thead>
+      <tbody>${filas.join('')}</tbody></table></div>`:`<div class="empty">${vacio}</div>`}
+    </section>`;
+  $('#app').innerHTML=`
+  <section class="card">
+    <h2>Período y filtros del informe</h2>
+    <div class="grid">
+      <label>Desde<input type="date" id="r_desde" value="${R.desde}"></label>
+      <label>Hasta<input type="date" id="r_hasta" value="${R.hasta}"></label>
+      <label>Contratista<select id="r_contratista"><option value="">Todos</option>${opt(contr.map(x=>[x,x]),R.contratista)}</select></label>
+      <label>Estado<select id="r_estado"><option value="">Todas</option>${opt([['Ejecutada','Solo ejecutadas'],['Planificada','Solo planificadas']],R.estado)}</select></label>
+    </div>
+    <div class="tiles">
+      <div><b>${r.n}</b><span>órdenes (${r.ej} ejecutadas)</span></div>
+      <div><b>${fmt(r.ha,1)}</b><span>hectáreas trabajadas</span></div>
+      <div><b>${fmt(r.ins,0)}</b><span>insumos (USD)</span></div>
+      <div><b>${fmt(r.lab,0)}</b><span>labores (USD)</span></div>
+      <div><b>${fmt(r.tot,0)}</b><span>costo total (USD)</span></div>
+    </div>
+    ${r.falta?`<p class="warn">Hay ${r.falta} producto${r.falta>1?'s':''} en órdenes sin precio. Cargá la factura en Depósito o un precio de referencia en Productos.</p>`:''}
+    <div class="row">
+      <button class="btn accent" id="bInfCampo">Descargar informe completo de ${esc(campo().nombre||'este campo')}</button>
+      <button class="btn" id="bInfTodos">Descargar todos los campos</button>
+    </div>
+    <p class="hint">Las órdenes ejecutadas cuentan con lo usado de verdad y las hectáreas hechas; las planificadas, con lo calculado. El informe completo trae en un solo Excel: resumen, órdenes, detalle de productos, productos gastados, costos por potrero, contratista y mes, facturas y stock. Cada hoja viene con filtros.</p>
+  </section>
+  ${tabla('prod','Productos gastados',[['Producto'],['Unidad'],['Usado (ejecutadas)','r'],['Planificado','r'],['Total','r'],['Costo USD','r']],
+    r.prod.map(p=>`<tr><td>${esc(p.prod)}${p.comercial.size?`<div class="sub">${esc([...p.comercial].join(', '))}</div>`:''}</td><td>${p.base}</td><td class="r">${fmt(p.ej)}</td><td class="r">${fmt(p.pl)}</td><td class="r"><b>${fmt(p.ej+p.pl)}</b></td><td class="r">${fmt(p.usd,0)}</td></tr>`),
+    'No hay productos en este período.')}
+  ${tabla('pot','Costo por potrero',[['Potrero'],['Cultivo'],['Órdenes','r'],['Hectáreas','r'],['Insumos USD','r'],['Labores USD','r'],['Total USD','r'],['USD/ha','r'],['Último trabajo','r']],
+    r.pot.map(x=>`<tr><td>${esc(x.k)}</td><td>${esc([...x.cultivos].join(', '))}</td><td class="r">${x.ordenes}</td><td class="r">${fmt(x.ha,1)}</td><td class="r">${fmt(x.ins,0)}</td><td class="r">${fmt(x.lab,0)}</td><td class="r"><b>${fmt(x.tot,0)}</b></td><td class="r"><b>${fmt(x.porHa,1)}</b></td><td class="r">${fmtDate(x.ultima)}</td></tr>`),
+    'Sin datos.','USD/ha es la suma del costo por hectárea de cada pasada en ese potrero (por ejemplo, barbecho + preemergente).')}
+  ${tabla('contr','Por contratista',[['Contratista'],['Órdenes','r'],['Hectáreas','r'],['Labores USD','r'],['Insumos USD','r']],
+    r.contr.map(x=>`<tr><td>${esc(x.k)}</td><td class="r">${x.ordenes}</td><td class="r">${fmt(x.ha,1)}</td><td class="r">${fmt(x.lab,0)}</td><td class="r">${fmt(x.ins,0)}</td></tr>`),'Sin datos.')}
+  ${tabla('mes','Por mes',[['Mes'],['Órdenes','r'],['Hectáreas','r'],['Insumos USD','r'],['Labores USD','r'],['Total USD','r']],
+    r.mes.map(x=>`<tr><td>${nomMes(x.k)}</td><td class="r">${x.ordenes}</td><td class="r">${fmt(x.ha,1)}</td><td class="r">${fmt(x.ins,0)}</td><td class="r">${fmt(x.lab,0)}</td><td class="r">${fmt(x.tot,0)}</td></tr>`),'Sin datos.')}`;
+  ['desde','hasta','contratista','estado'].forEach(k=>$('#r_'+k).onchange=e=>{R[k]=e.target.value;vInf()});
+  const filtros=descFiltros(R);
+  $('#bInfCampo').onclick=()=>excelCompleto(list,S.compras,{titulo:'Informe '+(campo().nombre||''),filtros,desde:R.desde,hasta:R.hasta,todasOrdenes:S.orders});
+  $('#bInfTodos').onclick=async()=>{
+    toast('Juntando los datos de todos los campos…');
+    try{const [qo,qc]=await Promise.all([db.collection('ordenes').get(),db.collection('compras').get()]);
+      const ao=qo.docs.map(d=>({...d.data(),id:d.id}));
+      excelCompleto(filtrarR(ao),qc.docs.map(d=>({...d.data(),id:d.id})),{titulo:'Informe de todos los campos',filtros,todos:true,desde:R.desde,hasta:R.hasta,todasOrdenes:ao})}
+    catch(x){toast('No se pudieron traer los datos. Revisá la conexión.')}};
+  document.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{
+    const sh=hojas(list,r,P,false)[b.dataset.x];
+    descargar([sh],`${slug(sh.name)}-${slug(campo().nombre)}-${today()}.xlsx`);
+  });
+}
+
+/* ---------- Productos ---------- */
+const deb={};
+function later(key,fn,ms=600){clearTimeout(deb[key]);deb[key]=setTimeout(fn,ms)}
+function vProd(){
+  $('#app').innerHTML=`
+  <section class="card">
+    <div class="row" style="justify-content:space-between"><h2>Productos guardados</h2><button class="btn sm" id="pAdd">+ Producto</button></div>
+    <p class="hint">La lista es la misma para todos los campos y todos los usuarios. Al elegir un producto en la orden, se completan solos la formulación, la unidad y el nombre comercial. La nota sale en el PDF. El precio de referencia se usa solo si en ese campo todavía no hay facturas de ese producto. Si cambiás el nombre de un producto, se cambia en todas las órdenes y facturas; si le ponés el nombre de otro que ya existe, se unen.</p>
+    ${S.products.length?'':'<div class="empty">No hay productos todavía. También se agregan solos al guardar una orden o una factura.</div>'}
+    <div class="items">${S.products.map(p=>`
+      <div class="item" data-id="${p.id}">
+        <div class="g">
+          <label>Producto<input data-k="nombre" value="${esc(p.nombre)}"></label>
+          <label>Nombre comercial<input data-k="comercial" value="${esc(p.comercial)}"></label>
+          <label>Formulación<select data-k="form">${opt(Object.entries(FORMS).map(([k,v])=>[k,v.l]),p.form)}</select></label>
+          <label>Unidad de dosis<select data-k="unidad">${opt(Object.keys(UNITS).map(u=>[u,u]),p.unidad)}</select></label>
+          <label>Precio ref. USD por ${(UNITS[p.unidad]||UNITS['L/ha']).b}<input data-k="precio" inputmode="decimal" value="${esc(p.precio??'')}"></label>
+        </div>
+        <div class="row" style="justify-content:space-between">
+          <label style="flex:1">Nota de preparación (opcional)<input data-k="nota" value="${esc(p.nota)}"></label>
+          <button class="btn sm danger" data-del>Quitar</button>
+        </div>
+      </div>`).join('')}</div>
+  </section>`;
+  $('#pAdd').onclick=async()=>{await db.collection('productos').add({nombre:' Nuevo producto',comercial:'',form:'SL',unidad:'L/ha',nota:'',precio:'',creadoPor:quien()});vProd()};
+  document.querySelectorAll('.item[data-id]').forEach(el=>{
+    const id=el.dataset.id;
+    el.querySelectorAll('[data-k]').forEach(i=>{
+      if(i.dataset.k==='nombre'){i.addEventListener('change',async()=>{const p=S.products.find(x=>x.id===id);
+        if(!limpiarNombre(i.value)){i.value=p.nombre;return}
+        if(await renombrar('producto',p.nombre,i.value))setTimeout(vProd,500)});return}
+      i.addEventListener('input',e=>{const k=i.dataset.k,v=e.target.value;later(id+k,()=>db.collection('productos').doc(id).update({[k]:k==='precio'?(v.trim()===''?'':n(v)):v.trim()}))})});
+    el.querySelector('[data-del]').onclick=()=>{db.collection('productos').doc(id).delete();setTimeout(vProd,300)};
+  });
+}
+
+/* ---------- Ajustes (de cada campo) ---------- */
+function vAjustes(){
+  const st=campo();
+  $('#app').innerHTML=`
+  <section class="card">
+    <h2>Datos de este campo</h2>
+    <p class="hint">Salen en el PDF de las órdenes de este campo. Los ven todos los usuarios.</p>
+    <div class="grid">
+      <label>Nombre del campo<input id="s_nombre" value="${esc(st.nombre)}"></label>
+      <label>Responsable técnico<input id="s_responsable" value="${esc(st.responsable)}"></label>
+      <label>Próximo Nº de orden<input id="s_next" inputmode="numeric" value="${st.next||1}"></label>
+    </div>
+    <label>Logo (opcional)<input type="file" id="s_logo" accept="image/png,image/jpeg"></label>
+    ${st.logo?`<div class="row"><img src="${st.logo}" alt="Logo" style="height:48px"><button class="btn sm danger" id="s_dellogo">Quitar logo</button></div>`:''}
+    <label>Notas importantes (una por renglón)<textarea id="s_notas" rows="7">${esc(st.notas??NOTAS_DEF)}</textarea></label>
+  </section>
+  <section class="card">
+    <h2>Listas desplegables</h2>
+    ${htmlListas()}
+  </section>
+  <section class="card">
+    <h2>Copia de seguridad</h2>
+    <p class="hint">Descarga un archivo con todas las órdenes, facturas y productos de este campo, por si algún día lo necesitás.</p>
+    <div class="row"><button class="btn" id="bBackup">Descargar copia</button></div>
+  </section>`;
+  const ref=db.collection('campos').doc(CID);
+  const setA=(k,v)=>ref.set({[k]:v},{merge:true});
+  ['nombre','responsable','notas'].forEach(k=>$('#s_'+k).oninput=e=>{const v=e.target.value;later('a'+k,()=>{if(k==='nombre'&&!v.trim())return;setA(k,k==='nombre'?v.trim():v)})});
+  $('#s_next').oninput=e=>{const v=parseInt(e.target.value);if(v>0)later('nx',()=>setA('next',v))};
+  $('#s_logo').onchange=e=>{const f=e.target.files[0];if(!f)return;const img=new Image();
+    img.onload=()=>{const sc=Math.min(1,300/Math.max(img.width,img.height));const cv=document.createElement('canvas');
+      cv.width=Math.round(img.width*sc);cv.height=Math.round(img.height*sc);const cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,cv.width,cv.height);
+      cx.drawImage(img,0,0,cv.width,cv.height);setA('logo',cv.toDataURL('image/jpeg',.85)).then(()=>{toast('Logo guardado');vAjustes()})};
+    img.src=URL.createObjectURL(f)};
+  if($('#s_dellogo'))$('#s_dellogo').onclick=()=>setA('logo','').then(vAjustes);
+  bindListas(vAjustes);
+  $('#bBackup').onclick=()=>{const b=new Blob([JSON.stringify({campo:st,ordenes:S.orders,compras:S.compras,productos:S.products},null,1)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`copia-${slug(st.nombre)}-${today()}.json`;a.click()};
+}
+
+/* ===================== PDF ===================== */
+function makePDF(o){
+  if(!window.jspdf){toast('No se cargó el generador de PDF. Revisá la conexión.');return}
+  const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4'});
+  const c=calc(o), st=campo(), W=210, M=14, ci=ejecutada(o)&&o.cierre?o.cierre:null;
+  const green=[31,59,51], amber=[201,138,18];
+  let y=M;
+  if(st.logo){try{doc.addImage(st.logo,'JPEG',M,y,28,18,undefined,'FAST')}catch(e){}}
+  const lx=st.logo?M+32:M;
+  doc.setFont('helvetica','bold');doc.setFontSize(15);doc.setTextColor(...green);
+  doc.text(st.nombre||o.campoNombre||'Orden de trabajo',lx,y+6);
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(90);
+  if(st.responsable)doc.text('Responsable técnico: '+st.responsable,lx,y+12);
+  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(30);
+  doc.text('ORDEN DE TRABAJO Nº '+o.num,W-M,y+6,{align:'right'});
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(70);
+  doc.text(['Fecha: '+fmtDate(o.fecha),'Estado: '+(o.estado||'Planificada')],W-M,y+12,{align:'right'});
+  y+=24;doc.setDrawColor(...amber);doc.setLineWidth(.8);doc.line(M,y,W-M,y);y+=4;
+  const head={fillColor:green,textColor:255,fontStyle:'bold',fontSize:8.5};
+  doc.autoTable({startY:y,margin:{left:M,right:M},theme:'grid',headStyles:head,styles:{fontSize:9,cellPadding:2},
+    head:[['Labor','Potrero / lote','Cultivo','Contratista','Operario','Superficie','Precio']],
+    body:[[o.labor,o.potrero,o.cultivo,o.contratista,o.operario,fmt(c.sup,2)+' ha',o.precio?'USD '+fmt(n(o.precio))+'/ha':'']]});
+  y=doc.lastAutoTable.finalY+6;
+  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...green);doc.text('Cálculo del caldo',M,y);y+=2;
+  doc.autoTable({startY:y,margin:{left:M,right:M},theme:'plain',styles:{fontSize:9.5,cellPadding:1.6},
+    body:[['Caudal',fmt(c.caudal)+' L/ha','Capacidad del tanque',fmt(c.tq,0)+' L'],
+      ['Hectáreas por tanque',fmt(c.haTq,2)+' ha','Cantidad de tanques',fmt(c.tanques,2)+' ('+c.llenos+' llenos'+(c.resto>0.01?' + 1 de '+fmt(c.ultimoL,0)+' L)':')')],
+      ['Caldo total',fmt(c.agua,0)+' L','','']],
+    columnStyles:{0:{textColor:100},2:{textColor:100},1:{fontStyle:'bold'},3:{fontStyle:'bold'}}});
+  y=doc.lastAutoTable.finalY+6;
+  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...green);doc.text('Orden de carga del tanque',M,y);y+=2;
+  const last=c.resto>0.01, us=ci&&ci.usado||{};
+  const rows=[['1','Agua','','','','','','Llenar el tanque hasta la mitad con agua limpia y empezar a agitar.']];
+  c.items.forEach((i,k)=>{const u=us[keyOf(i.prod,i.base)];rows.push([String(k+2),i.prod+(i.comercial?'\n'+i.comercial:''),i.form,fmt(n(i.dosis),3)+' '+i.unidad,fmt(i.total)+' '+i.base,
+    fmt(i.porTq)+' '+i.base+(last?'\nÚltimo: '+fmt(i.ult)+' '+i.base:''),u!==undefined?fmt(u)+' '+i.base:'',((FORMS[i.form]||FORMS.OTRO).r+notaProd(i.prod)).trim()])});
+  rows.push([String(c.items.length+2),'Agua','','','','','','Completar el tanque y mantener la agitación.']);
+  doc.autoTable({startY:y,margin:{left:M,right:M},theme:'grid',headStyles:head,styles:{fontSize:8.5,cellPadding:1.8,valign:'middle'},
+    head:[['Paso','Producto','Form.','Dosis','Total','Por tanque','Usado','Recomendación']],body:rows,
+    columnStyles:{0:{halign:'center',cellWidth:10},2:{cellWidth:12},3:{cellWidth:22},4:{cellWidth:20,fontStyle:'bold'},5:{cellWidth:24,fontStyle:'bold'},6:{cellWidth:18},7:{cellWidth:'auto',fontSize:8}},
+    didParseCell:d=>{if(d.section==='body'&&(d.row.index===0||d.row.index===rows.length-1))d.cell.styles.fillColor=[234,241,237]}});
+  y=doc.lastAutoTable.finalY+6;
+  if(o.obs){doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...green);doc.text('Observaciones',M,y);y+=5;
+    doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(40);const t=doc.splitTextToSize(o.obs,W-2*M);doc.text(t,M,y);y+=t.length*4.2+3}
+  doc.autoTable({startY:y,margin:{left:M,right:M},theme:'grid',headStyles:{...head,fillColor:[90,100,95]},styles:{fontSize:9,cellPadding:2,minCellHeight:8},
+    head:[['Fecha ejecutada','Hora inicio','Hora fin','Ha hechas','Viento (km/h)','Temp. (°C)','Humedad (%)']],
+    body:[ci?[fmtDate(ci.fecha),ci.hIni||'',ci.hFin||'',fmt(n(ci.ha),2),ci.viento||'',ci.temp||'',ci.hum||'']:['','','','','','','']]});
+  y=doc.lastAutoTable.finalY+6;
+  if(ci&&ci.obs){doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...green);doc.text('Observaciones del cierre',M,y);y+=5;
+    doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(40);const t=doc.splitTextToSize(ci.obs,W-2*M);doc.text(t,M,y);y+=t.length*4.2+3}
+  const notas=(st.notas??NOTAS_DEF).split('\n').filter(Boolean);
+  if(notas.length){
+    if(y>250){doc.addPage();y=M}
+    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...green);doc.text('Notas importantes',M,y);y+=5;
+    doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(50);
+    notas.forEach(t=>{const l=doc.splitTextToSize('- '+t,W-2*M);doc.text(l,M,y);y+=l.length*4})}
+  y=Math.max(y+14,262);if(y>285){doc.addPage();y=40}
+  doc.setDrawColor(150);doc.setLineWidth(.3);doc.line(M,y,M+70,y);doc.line(W-M-70,y,W-M,y);
+  doc.setFontSize(8.5);doc.setTextColor(90);doc.text('Firma operario'+(ci&&ci.operario?' ('+ci.operario+')':''),M,y+4);doc.text('Firma responsable',W-M-70,y+4);
+  doc.save(`OT-${o.num}-${slug(o.potrero||'orden')}${ci?'-cerrada':''}.pdf`);
+  toast('PDF descargado');
+}
+
+/* ===================== EXCEL ===================== */
+const slug=s=>String(s||'campo').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w-]+/g,'_').slice(0,40);
+const aFecha=s=>{if(!s)return'';const[a,m,d]=s.split('-').map(Number);return a?new Date(a,m-1,d,12):''};
+const r2=v=>Math.round(v*100)/100, r3=v=>Math.round(v*1000)/1000;
+const F2='#,##0.00',F0='#,##0';
+/* Arma cada hoja del informe. "todos" agrega la columna Campo y la hoja Por campo */
+function hojas(list,r,P,todos){
+  const ord=[...list].sort((a,b)=>(a.campoNombre||'').localeCompare(b.campoNombre||'')||(+a.num||0)-(+b.num||0));
+  const C=o=>todos?{'Campo':o.campoNombre||''}:{};
+  const H={};
+  H.ordenes={name:'Órdenes',fmt:{'Superficie planificada (ha)':F2,'Ha hechas':F2,'Precio labor (USD/ha)':F2,'Labor USD':F2,'Insumos USD':F2,'Total USD':F2,'USD/ha':F2,'Tanques':F2,'Caldo total (L)':F0},
+    rows:ord.map(o=>{const c=calc(o),k=costos(o,P),ci=ejecutada(o)&&o.cierre||{};return{...C(o),'Nº':+o.num||'','Fecha orden':aFecha(o.fecha),'Estado':o.estado||'Planificada',
+      'Fecha ejecutada':aFecha(ci.fecha),'Potrero':o.potrero,'Cultivo':o.cultivo,'Labor':o.labor,'Contratista':o.contratista,'Operario':ci.operario||o.operario,
+      'Superficie planificada (ha)':r2(c.sup),'Ha hechas':ci.ha?r2(n(ci.ha)):'','Precio labor (USD/ha)':n(o.precio),'Labor USD':r2(k.lab),'Insumos USD':r2(k.ins),'Total USD':r2(k.tot),'USD/ha':r2(k.porHa),
+      'Productos sin precio':k.falta||'','Caudal (L/ha)':c.caudal,'Tanque (L)':c.tq,'Tanques':r2(c.tanques),'Caldo total (L)':Math.round(c.agua),
+      'Hora inicio':ci.hIni||'','Hora fin':ci.hFin||'','Viento (km/h)':ci.viento||'','Temp. (°C)':ci.temp||'','Humedad (%)':ci.hum||'',
+      'Productos':k.items.map(i=>i.prod).join(', '),'Observaciones':o.obs||'','Obs. cierre':ci.obs||'','Cargó':o.creadoPor||'','Cerró':ci.cerradoPor||'','Editó':o.editadoPor||''}})};
+  const det=[];ord.forEach(o=>{const k=costos(o,P);k.items.forEach((i,ix)=>det.push({...C(o),'Nº':+o.num||'','Fecha orden':aFecha(o.fecha),'Estado':o.estado||'Planificada','Fecha ejecutada':aFecha(ejecutada(o)&&o.cierre?o.cierre.fecha:''),
+    'Potrero':o.potrero,'Labor':o.labor,'Contratista':o.contratista,'Paso de carga':ix+2,'Producto':i.prod,'Nombre comercial':i.comercial||'',
+    'Formulación':i.form,'Dosis':n(i.dosis),'Unidad dosis':i.unidad,'Planificado':r3(i.plan),'Usado real':i.real!=null?r3(i.real):'','Diferencia':i.real!=null?r3(i.real-i.plan):'',
+    'Unidad':i.base,'Precio USD por unidad':i.pu!=null?r3(i.pu):'','Costo USD':r2(i.costo)}))});
+  H.detalle={name:'Detalle productos',fmt:{'Planificado':F2,'Usado real':F2,'Diferencia':F2,'Precio USD por unidad':F2,'Costo USD':F2},rows:det};
+  H.prod={name:'Productos gastados',fmt:{'Usado (ejecutadas)':F2,'Planificado (pendiente)':F2,'Total':F2,'Costo USD':F2,'Hectáreas':F2},
+    rows:r.prod.map(p=>({'Producto':p.prod,'Nombres comerciales':[...p.comercial].join(', '),'Unidad':p.base,'Usado (ejecutadas)':r2(p.ej),'Planificado (pendiente)':r2(p.pl),
+      'Total':r2(p.ej+p.pl),'Costo USD':r2(p.usd),'Órdenes':p.ordenes,'Hectáreas':r2(p.ha)}))};
+  const tot={'Hectáreas':F2,'Insumos USD':F2,'Labores USD':F2,'Total USD':F2,'USD/ha':F2};
+  H.pot={name:'Costo por potrero',fmt:tot,rows:r.pot.map(x=>({'Potrero':x.k,'Cultivo':[...x.cultivos].join(', '),'Órdenes':x.ordenes,'Hectáreas':r2(x.ha),
+    'Insumos USD':r2(x.ins),'Labores USD':r2(x.lab),'Total USD':r2(x.tot),'USD/ha':r2(x.porHa),'Último trabajo':aFecha(x.ultima)}))};
+  H.contr={name:'Por contratista',fmt:tot,rows:r.contr.map(x=>({'Contratista':x.k,'Órdenes':x.ordenes,'Hectáreas':r2(x.ha),'Labores USD':r2(x.lab),'Insumos USD':r2(x.ins)}))};
+  H.mes={name:'Por mes',fmt:tot,rows:r.mes.map(x=>({'Mes':nomMes(x.k),'Órdenes':x.ordenes,'Hectáreas':r2(x.ha),'Insumos USD':r2(x.ins),'Labores USD':r2(x.lab),'Total USD':r2(x.tot)}))};
+  if(todos)H.camp={name:'Por campo',fmt:tot,rows:r.camp.map(x=>({'Campo':x.k,'Órdenes':x.ordenes,'Hectáreas':r2(x.ha),'Insumos USD':r2(x.ins),'Labores USD':r2(x.lab),'Total USD':r2(x.tot)}))};
+  return H;
+}
+function hojasDeposito(orders,compras,todos){
+  const P=precios(compras), cn={};compras.forEach(c=>cn[c.campoId]=c.campoNombre);orders.forEach(o=>cn[o.campoId]=o.campoNombre);
+  const C=cid=>todos?{'Campo':cn[cid]||''}:{};
+  const st=stock(orders,compras,P).sort((a,b)=>(cn[a.campoId]||'').localeCompare(cn[b.campoId]||'')||a.prod.localeCompare(b.prod));
+  const H={};
+  H.stock={name:'Stock',fmt:{'Entradas':F2,'Usado':F2,'Stock actual':F2,'Comprometido':F2,'Disponible':F2,'Precio prom. USD':F2,'Valor USD':F2},
+    rows:st.map(r=>({...C(r.campoId),'Producto':r.prod,'Unidad':r.base,'Entradas':r2(r.entra),'Usado':r2(r.sale),'Stock actual':r2(r.actual),
+      'Comprometido':r2(r.comp),'Disponible':r2(r.disp),'Precio prom. USD':r.pu!=null?r2(r.pu):'','Valor USD':r2(r.valor)}))};
+  const cs=compras.filter(c=>!c.borrado).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  const usd=(c,v)=>{const tc=c.moneda==='PES'?n(c.cotizacion):1;return tc?v/tc:0};
+  H.compras={name:'Facturas y ajustes',fmt:{'Total moneda original':F2,'Cotización':F2,'Total USD':F2},
+    rows:cs.map(c=>{const t=(c.items||[]).reduce((a,i)=>a+n(i.importe),0);return{...C(c.campoId),'Fecha':aFecha(c.fecha),'Tipo':c.tipo==='ajuste'?'Ajuste':'Compra',
+      'Proveedor':c.proveedor||'','Nº factura':c.numero||'','Motivo':c.motivo&&c.tipo==='ajuste'?c.motivo:'','Moneda':c.moneda==='PES'?'Pesos':'USD',
+      'Total moneda original':r2(t),'Cotización':c.moneda==='PES'?n(c.cotizacion):'','Total USD':r2(usd(c,t)),'Productos':(c.items||[]).map(i=>i.prod).join(', '),
+      'Con foto':c.foto?'Sí':'','Observaciones':c.obs||'','Cargó':c.creadoPor||''}})};
+  const lin=[];cs.forEach(c=>(c.items||[]).forEach(i=>{const q=n(i.cantidad),imp=n(i.importe);lin.push({...C(c.campoId),'Fecha':aFecha(c.fecha),'Tipo':c.tipo==='ajuste'?'Ajuste':'Compra',
+    'Proveedor':c.proveedor||'','Nº factura':c.numero||'','Producto':i.prod,'Cantidad':q,'Unidad':i.unidad,'Importe moneda original':imp||'','Moneda':c.moneda==='PES'?'Pesos':'USD',
+    'Importe USD':imp?r2(usd(c,imp)):'','Precio USD por unidad':imp&&q?r3(usd(c,imp)/q):''})}));
+  H.lineas={name:'Detalle compras',fmt:{'Cantidad':F2,'Importe moneda original':F2,'Importe USD':F2,'Precio USD por unidad':F2},rows:lin};
+  return H;
+}
+function hojaDe(sh){
+  const rows=sh.rows.length?sh.rows:[{'Sin datos':''}];
+  const ws=XLSX.utils.json_to_sheet(rows,{dateNF:'dd/mm/yyyy'});
+  const keys=Object.keys(rows[0]);
+  if(sh.rows.length){
+    ws['!autofilter']={ref:ws['!ref']};
+    keys.forEach((k,ci)=>{const f=(sh.fmt||{})[k];if(!f)return;
+      for(let ri=1;ri<=rows.length;ri++){const cell=ws[XLSX.utils.encode_cell({r:ri,c:ci})];if(cell&&cell.t==='n')cell.z=f}});
+  }
+  ws['!cols']=keys.map(k=>({wch:Math.min(45,Math.max(k.length+3,...rows.slice(0,300).map(r=>{const v=r[k];return v instanceof Date?11:String(v??'').length+2})))}));
+  return ws;
+}
+function descargar(sheets,archivo,resumen){
+  if(!window.XLSX){toast('No se cargó el generador de Excel. Revisá la conexión.');return}
+  const wb=XLSX.utils.book_new();
+  if(resumen){const ws=XLSX.utils.aoa_to_sheet(resumen);ws['!cols']=[{wch:30},{wch:48}];XLSX.utils.book_append_sheet(wb,ws,'Resumen')}
+  sheets.forEach(sh=>XLSX.utils.book_append_sheet(wb,hojaDe(sh),sh.name.slice(0,31)));
+  XLSX.writeFile(wb,archivo);
+  toast('Excel descargado');
+}
+function excelCompleto(list,compras,{titulo,filtros,todos=false,desde='',hasta='',todasOrdenes=[]}){
+  list=list.filter(o=>!o.borrado);
+  if(!list.length&&!compras.some(c=>!c.borrado)){toast('No hay datos para exportar');return}
+  const P=precios(compras), r=resumir(list,P), H=hojas(list,r,P,todos);
+  const cf=compras.filter(c=>!c.borrado&&(!desde||c.fecha>=desde)&&(!hasta||c.fecha<=hasta));
+  // el stock siempre es el de hoy; las facturas, las del período
+  const D=hojasDeposito(todasOrdenes,compras,todos), Dp=hojasDeposito([],cf,todos);
+  const fechas=list.map(fechaReal).filter(Boolean).sort();
+  const resumen=[[titulo],[],
+    ['Campo',todos?'Todos los campos':(campo().nombre||'')],
+    ['Filtros',filtros],
+    ['Fechas de las órdenes',fechas.length?fmtDate(fechas[0])+' al '+fmtDate(fechas[fechas.length-1]):''],
+    ['Órdenes',r.n],['Ejecutadas',r.ej],['Planificadas',r.n-r.ej],
+    ['Hectáreas trabajadas',r2(r.ha)],['Costo de insumos (USD)',r2(r.ins)],['Costo de labores (USD)',r2(r.lab)],['Costo total (USD)',r2(r.tot)],
+    ['Costo promedio (USD/ha)',r.ha?r2(r.tot/r.ha):''],['Litros de caldo',Math.round(r.agua)],
+    ['Productos sin precio',r.falta],
+    [],['Las ejecutadas cuentan lo usado de verdad; las planificadas, lo calculado.'],
+    ['Los precios salen del promedio de las facturas de cada campo, o del precio de referencia del producto.'],
+    [],['Descargado por',quien()],['Fecha de descarga',fmtDate(today())]];
+  const sh=['ordenes','detalle','prod','pot','contr','mes'].map(k=>H[k]);if(todos)sh.push(H.camp);
+  sh.push(Dp.compras,Dp.lineas,D.stock);
+  descargar(sh,`${todos?'todos-los-campos':slug(campo().nombre)}-${today()}.xlsx`,resumen);
+}
+
+/* ===================== ARRANQUE ===================== */
+function toast(m){document.querySelectorAll('.toast').forEach(x=>x.remove());const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2600)}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;confirmDel=null;confirmCompra=null;reabrirConf=false;render();scrollTo(0,0)});
+$('#bSalir').onclick=()=>{lsSet('campoElegido',null);salir()};
+$('#bCampo').onclick=()=>{lsSet('campoElegido',null);draft=null;editingId=null;vCampos()};
+/* Modo claro / oscuro: la luna pasa a oscuro, el sol pasa a claro. Se recuerda en cada aparato */
+$('#bTema').onclick=()=>{
+  const root=document.documentElement;
+  const oscuro=root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
+  const nuevo=oscuro?'light':'dark';
+  root.setAttribute('data-theme',nuevo);lsSet('tema',nuevo);
+};
+// Cierre de sesión automático tras 12 horas sin uso
+let ultimo=Date.now();['click','keydown','touchstart'].forEach(ev=>addEventListener(ev,()=>ultimo=Date.now(),{passive:true}));
+setInterval(()=>{if(USER&&Date.now()-ultimo>12*3600e3)salir()},60e3);
+if(configOk){
+  auth.onAuthStateChanged(u=>{USER=u;if(u)startBase();else{stopAll();vLogin()}});
+}else vLogin();
+</script>
+</body>
+</html>
