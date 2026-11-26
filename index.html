@@ -49,6 +49,9 @@ main{max-width:1000px;margin:0 auto;padding:16px max(16px,env(safe-area-inset-ri
 section.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:12px;min-width:0}
 h2{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:0;font-weight:600}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.grid.g-fecha{grid-template-columns:minmax(120px,150px) minmax(0,1fr) minmax(0,1fr)}
+input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;min-width:0;max-width:100%;display:block;min-height:40px}
+.grid>label{min-width:0}
 label{display:grid;gap:4px;font-size:12px;color:var(--muted);font-weight:500;min-width:0}
 input,select,textarea{font:15px var(--sans);color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:7px;padding:9px 10px;width:100%;min-width:0}
 input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
@@ -87,6 +90,8 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 .empty{color:var(--muted);text-align:center;padding:20px}
 @media (max-width:640px){
   .grid{grid-template-columns:1fr 1fr}
+  .grid.g-fecha{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .grid.g-fecha label:first-child{grid-column:1/-1;max-width:170px}
   .olist{grid-template-columns:1fr}
   .item .g{grid-template-columns:1fr 1fr}
   .item .g label:first-child{grid-column:1/-1}
@@ -149,6 +154,8 @@ td.r{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .lrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .lrow input{flex:1;min-width:160px}
 .lrow select{flex:1;min-width:150px;width:auto}
+.lrow [data-fo]{flex:1.3}
+.lrow [data-addunid]{flex:0 0 100px;min-width:90px}
 .fuera{display:grid;gap:8px;background:var(--accent-soft);border-radius:8px;padding:10px}
 .fn{font-weight:600;min-width:100px}
 .thumb{height:64px;border-radius:6px;border:1px solid var(--line);cursor:zoom-in}
@@ -350,7 +357,7 @@ function calc(o){
   const ultimoL=resto*tq;
   const items=(o.items||[]).filter(i=>i.prod||n(i.dosis)).map(i=>{
     const u=UNITS[i.unidad]||UNITS['L/ha'];
-    return {...i,total:n(i.dosis)*sup*u.f,porTq:n(i.dosis)*haTq*u.f,ult:n(i.dosis)*resto*haTq*u.f,base:u.b,orden:(FORMS[i.form]||FORMS.OTRO).o};
+    return {...i,total:n(i.dosis)*sup*u.f,porTq:n(i.dosis)*haTq*u.f,ult:n(i.dosis)*resto*haTq*u.f,base:u.b,orden:forma(i.form).o};
   }).sort((a,b)=>a.orden-b.orden);
   return {sup,caudal,tq,haTq,tanques,llenos,resto,ultimoL,agua:sup*caudal,items};
 }
@@ -401,13 +408,49 @@ const stockCampo=()=>{const P=precios(S.compras);const st={};stock(S.orders,S.co
 const LISTAS={
   potrero:{titulo:'Potreros de este campo',campoOrden:'potrero',nota:'Cada campo tiene sus propios potreros.'},
   contratista:{titulo:'Contratistas',campoOrden:'contratista',nota:'La lista es la misma para todos los campos.'},
-  cultivo:{titulo:'Cultivos',campoOrden:'cultivo',nota:'La lista es la misma para todos los campos.'}
+  cultivo:{titulo:'Cultivos',campoOrden:'cultivo',nota:'La lista es la misma para todos los campos.'},
+  labor:{titulo:'Tipos de labor',campoOrden:'labor',nota:'La lista es la misma para todos los campos.'},
+  producto:{titulo:'Productos',nota:'La lista es la misma para todos los campos. La formulación, la unidad y el precio de cada uno se completan en la pestaña Productos.'}
 };
+const CLAVE={contratista:'contratistas',cultivo:'cultivos',labor:'labores'};
+const LABORES_BASE=['Pulverización terrestre','Pulverización aérea','Fertilización','Siembra','Refertilización','Movimiento de tierra','Otra'];
+/* Formulaciones: las fijas más las que agrega cada uno (con su lugar en el orden de carga y su recomendación) */
+const NUEVA_F='__nuevaforma__';
+const formasPropias=()=>(S.listas&&S.listas.formulaciones)||[];
+const forma=k=>FORMS[k]||formasPropias().find(f=>f.k===k)||FORMS.OTRO;
+function selForma(attrs,valor){
+  const ops=[...Object.entries(FORMS).filter(([k])=>k!=='OTRO').map(([k,v])=>[k,v.l]),...formasPropias().map(f=>[f.k,f.l]),['OTRO','Otro']];
+  if(valor&&!ops.some(o=>o[0]===valor))ops.push([valor,valor]);
+  return `<select ${attrs}>${opt(ops,valor)}<option value="${NUEVA_F}">+ Agregar formulación…</option></select>`;
+}
+function bindForma(sel,onPick){
+  let prev=sel.value;
+  sel.addEventListener('change',()=>{
+    if(sel.value!==NUEVA_F){prev=sel.value;onPick(sel.value);return}
+    sel.value=prev;
+    if(sel.nextElementSibling&&sel.nextElementSibling.classList.contains('nuevo'))return;
+    const box=document.createElement('div');box.className='nuevo';
+    box.innerHTML=`<input placeholder="Ej: ME - Microemulsión"><button type="button" class="btn sm primary">Agregar</button><button type="button" class="btn sm">Cancelar</button>`;
+    sel.insertAdjacentElement('afterend',box);const inp=box.querySelector('input');inp.focus();
+    const ok=async()=>{const nom=limpiarNombre(inp.value);if(!nom){inp.focus();return}
+      let f=[...Object.entries(FORMS).map(([k,v])=>({k,l:v.l})),...formasPropias()].find(x=>norm(x.l)===norm(nom)||norm(x.k)===norm(nom));
+      if(!f){f={k:'F_'+slug(nom).toUpperCase().slice(0,20)+'_'+Date.now().toString(36).slice(-3),l:nom,o:7,r:''};
+        const nueva=[...formasPropias(),f];S.listas.formulaciones=nueva;
+        try{await db.collection('config').doc('listas').set({formulaciones:nueva},{merge:true});toast('Formulación agregada. Su orden de carga se ajusta en Ajustes.')}
+        catch(x){toast('No se pudo guardar');return}}
+      box.remove();const tmp=document.createElement('div');tmp.innerHTML=selForma('',f.k);sel.innerHTML=tmp.firstElementChild.innerHTML;
+      sel.value=f.k;prev=f.k;onPick(f.k)};
+    box.querySelector('.primary').onclick=e=>{e.preventDefault();ok()};
+    inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();ok()}if(e.key==='Escape')box.remove()};
+    box.querySelector('.btn:not(.primary)').onclick=e=>{e.preventDefault();box.remove()};
+  });
+}
 const NUEVO='__nuevo__';
 const limpiarNombre=s=>String(s||'').trim().replace(/\s+/g,' ');
 function lista(tipo){
   if(tipo==='producto')return [...new Set(S.products.map(p=>p.nombre).filter(Boolean).map(limpiarNombre))].sort((a,b)=>a.localeCompare(b));
-  const arr=tipo==='potrero'?(campo().potreros||[]):((S.listas||{})[tipo+'s']||[]);
+  if(tipo==='labor'){const l=(S.listas||{}).labores;return l?[...l]:[...LABORES_BASE]}   // las labores quedan en el orden en que se cargan
+  const arr=tipo==='potrero'?(campo().potreros||[]):((S.listas||{})[CLAVE[tipo]]||[]);
   return [...arr].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
 }
 async function agregarALista(tipo,nombre,extra){
@@ -417,7 +460,7 @@ async function agregarALista(tipo,nombre,extra){
   try{
     if(tipo==='producto')agregarAlCatalogo([{prod:nombre,...(extra||{})}]);
     else if(tipo==='potrero'){const c=campo();c.potreros=[...(c.potreros||[]),nombre];await db.collection('campos').doc(CID).set({potreros:AU},{merge:true})}
-    else{S.listas[tipo+'s']=[...(S.listas[tipo+'s']||[]),nombre];await db.collection('config').doc('listas').set({[tipo+'s']:AU},{merge:true})}
+    else{const nueva=[...lista(tipo),nombre];S.listas[CLAVE[tipo]]=nueva;await db.collection('config').doc('listas').set({[CLAVE[tipo]]:nueva},{merge:true})}
   }catch(x){toast('No se pudo guardar en la lista');return null}
   toast('Agregado a la lista');return nombre;
 }
@@ -473,7 +516,7 @@ async function renombrar(tipo,viejo,nuevo){
         ups.push(db.collection('campos').doc(CID).set({potreros:nueva},{merge:true}));
         S.orders.filter(o=>igual(o[k])).forEach(o=>ups.push(db.collection('ordenes').doc(o.id).update({[k]:destino})));
       }else{
-        ups.push(db.collection('config').doc('listas').set({[tipo+'s']:nueva},{merge:true}));
+        ups.push(db.collection('config').doc('listas').set({[CLAVE[tipo]]:tipo==='labor'?lista(tipo).map(x=>igual(x)?destino:x).filter((x,i,a)=>a.indexOf(x)===i):nueva},{merge:true}));
         const qo=await db.collection('ordenes').get();
         qo.docs.forEach(d=>{if(igual(d.data()[k]))ups.push(d.ref.update({[k]:destino}))});
       }
@@ -484,20 +527,23 @@ async function renombrar(tipo,viejo,nuevo){
 }
 async function quitarDeLista(tipo,nombre){
   const nueva=lista(tipo).filter(x=>x!==nombre);
-  try{if(tipo==='potrero')await db.collection('campos').doc(CID).set({potreros:nueva},{merge:true});
-    else await db.collection('config').doc('listas').set({[tipo+'s']:nueva},{merge:true});toast('Quitado de la lista')}
+  try{if(tipo==='producto')await Promise.all(S.products.filter(p=>limpiarNombre(p.nombre)===nombre).map(p=>db.collection('productos').doc(p.id).delete()));
+    else if(tipo==='potrero')await db.collection('campos').doc(CID).set({potreros:nueva},{merge:true});
+    else await db.collection('config').doc('listas').set({[CLAVE[tipo]]:nueva},{merge:true});toast('Quitado de la lista')}
   catch(x){toast('No se pudo quitar')}
 }
 /* Pantalla para ordenar las listas: renombrar, unir y sumar los nombres que quedaron escritos distinto */
 function htmlListas(){
   return Object.entries(LISTAS).map(([tipo,L])=>{
     const items=lista(tipo);
-    const usados=[...new Set(activas().map(o=>limpiarNombre(o[L.campoOrden])).filter(Boolean))];
+    const usados=tipo==='producto'
+      ?[...new Set([...activas().flatMap(o=>(o.items||[]).map(i=>limpiarNombre(i.prod))),...S.compras.filter(c=>!c.borrado).flatMap(c=>(c.items||[]).map(i=>limpiarNombre(i.prod)))].filter(Boolean))]
+      :[...new Set(activas().map(o=>limpiarNombre(o[L.campoOrden])).filter(Boolean))];
     const fuera=usados.filter(u=>!items.includes(u));
     return `<div class="lst" data-tipo="${tipo}">
-      <h3>${L.titulo}</h3><p class="hint">${L.nota} Si cambiás un nombre, se cambia en todas las órdenes. Si le ponés el nombre de otro que ya existe, se unen.</p>
+      <h3>${L.titulo}</h3><p class="hint">${L.nota} Si cambiás un nombre, se cambia en todas las órdenes${tipo==='producto'?' y facturas':''}. Si le ponés el nombre de otro que ya existe, se unen.</p>
       ${items.length?items.map(x=>`<div class="lrow"><input value="${esc(x)}" data-ren="${esc(x)}" aria-label="Nombre"><button class="btn sm danger" data-quitar="${esc(x)}">Quitar</button></div>`).join(''):'<div class="hint">La lista está vacía.</div>'}
-      <div class="lrow"><input placeholder="Agregar a la lista" data-add><button class="btn sm primary" data-addbtn>Agregar</button></div>
+      <div class="lrow"><input placeholder="Agregar a la lista" data-add>${tipo==='producto'?`${selForma('data-addform aria-label="Formulación"','SL')}<select data-addunid aria-label="Unidad">${opt(Object.keys(UNITS).map(u=>[u,u]),'L/ha')}</select>`:''}<button class="btn sm primary" data-addbtn>Agregar</button></div>
       ${fuera.length?`<div class="fuera"><b>Escritos en órdenes pero fuera de la lista</b>${fuera.map(f=>`
         <div class="lrow"><span class="fn">${esc(f)}</span>
           <select data-unir="${esc(f)}"><option value="">Unificar con…</option>${opt(items.map(x=>[x,x]),'')}</select>
@@ -505,17 +551,38 @@ function htmlListas(){
     </div>`}).join('');
 }
 function bindListas(rehacer){
-  document.querySelectorAll('.lst').forEach(box=>{
+  document.querySelectorAll('.lst[data-tipo]').forEach(box=>{
     const tipo=box.dataset.tipo;
     box.querySelectorAll('[data-ren]').forEach(inp=>inp.addEventListener('change',async()=>{
       if(!limpiarNombre(inp.value)){inp.value=inp.dataset.ren;return}
       if(await renombrar(tipo,inp.dataset.ren,inp.value))setTimeout(rehacer,400)}));
     box.querySelectorAll('[data-quitar]').forEach(b=>b.onclick=async()=>{await quitarDeLista(tipo,b.dataset.quitar);setTimeout(rehacer,300)});
-    const add=box.querySelector('[data-add]'), go=async()=>{if(await agregarALista(tipo,add.value))setTimeout(rehacer,300)};
+    const af=box.querySelector('[data-addform]'), au=box.querySelector('[data-addunid]');
+    if(af)bindForma(af,()=>{});
+    const add=box.querySelector('[data-add]'), go=async()=>{if(await agregarALista(tipo,add.value,tipo==='producto'?{form:af.value.startsWith('__')?'OTRO':af.value,unidad:au.value}:null))setTimeout(rehacer,300)};
     box.querySelector('[data-addbtn]').onclick=go;add.onkeydown=e=>{if(e.key==='Enter')go()};
     box.querySelectorAll('[data-unir]').forEach(s=>s.onchange=async()=>{if(s.value&&await renombrar(tipo,s.dataset.unir,s.value))setTimeout(rehacer,400)});
-    box.querySelectorAll('[data-sumar]').forEach(b=>b.onclick=async()=>{if(await agregarALista(tipo,b.dataset.sumar))setTimeout(rehacer,300)});
+    box.querySelectorAll('[data-sumar]').forEach(b=>b.onclick=async()=>{if(await agregarALista(tipo,b.dataset.sumar,tipo==='producto'?{form:'OTRO',unidad:'L/ha'}:null))setTimeout(rehacer,300)});
   });
+  /* formulaciones propias: orden de carga y recomendación */
+  const fb=document.querySelector('.lstf');if(!fb)return;
+  const guardarF=nueva=>db.collection('config').doc('listas').set({formulaciones:nueva},{merge:true}).catch(()=>toast('No se pudo guardar'));
+  fb.querySelectorAll('[data-fk]').forEach(row=>{const k=row.dataset.fk;
+    const upd=(campoF,v)=>{const nueva=formasPropias().map(f=>f.k===k?{...f,[campoF]:v}:f);S.listas.formulaciones=nueva;later('f'+k+campoF,()=>guardarF(nueva))};
+    row.querySelector('[data-fl]').oninput=e=>{if(limpiarNombre(e.target.value))upd('l',limpiarNombre(e.target.value))};
+    row.querySelector('[data-fo]').onchange=e=>upd('o',+e.target.value);
+    row.querySelector('[data-fr]').oninput=e=>upd('r',e.target.value);
+    row.querySelector('[data-fq]').onclick=async()=>{const nueva=formasPropias().filter(f=>f.k!==k);S.listas.formulaciones=nueva;await guardarF(nueva);toast('Formulación quitada');rehacer()};
+  });
+}
+const ORDEN_CARGA=[[1,'1 · Con los correctores de agua'],[2,'2 · Con los polvos y granulados (WG, WP)'],[3,'3 · Con las suspensiones (SC)'],[4,'4 · Con las emulsiones (SE, EW, OD)'],[5,'5 · Con los emulsionables (EC)'],[6,'6 · Con los solubles (SL)'],[7,'7 · Con los foliares'],[8,'8 · Con los aceites'],[9,'9 · Al final, con los coadyuvantes']];
+function htmlFormas(){
+  const fs=formasPropias();
+  return `<div class="lst lstf"><h3>Formulaciones agregadas</h3>
+    <p class="hint">Las fijas (WG, SC, EC, SL, etc.) ya vienen cargadas. Acá aparecen las que se agregan desde la orden con "+ Agregar formulación". Elegí en qué momento del orden de carga va y qué recomendación le sale al operario.</p>
+    ${fs.length?fs.map(f=>`<div class="lrow" data-fk="${esc(f.k)}"><input value="${esc(f.l)}" data-fl aria-label="Nombre"><select data-fo aria-label="Orden de carga">${opt(ORDEN_CARGA.map(([v,l])=>[String(v),l]),String(f.o||7))}</select><input value="${esc(f.r||'')}" placeholder="Recomendación para el operario" data-fr><button class="btn sm danger" data-fq>Quitar</button></div>`).join('')
+      :'<div class="hint">Todavía no se agregó ninguna.</div>'}
+  </div>`;
 }
 
 /* ===================== VISTAS ===================== */
@@ -548,7 +615,7 @@ function fillLists(){
 const opt=(arr,sel)=>arr.map(([v,l])=>`<option value="${esc(v)}"${v===sel?' selected':''}>${esc(l)}</option>`).join('');
 function newDraft(){
   return {num:null,fecha:today(),potrero:'',cultivo:'',
-    labor:LABORES[0],contratista:'',operario:'',precio:'',sup:'',caudal:'80',tanque:'3000',obs:'',
+    labor:lista('labor')[0]||'',contratista:'',operario:'',precio:'',sup:'',caudal:'80',tanque:'3000',obs:'',
     items:[{prod:'',comercial:'',form:'SL',dosis:'',unidad:'L/ha'}]};
 }
 const CAMPOS=['num','fecha','potrero','cultivo','labor','contratista','operario','precio','sup','caudal','tanque','obs','items'];
@@ -562,7 +629,7 @@ function vOrden(){
     <div class="row" style="justify-content:space-between"><h2>Orden de trabajo Nº <span class="num" id="numBox">${editingId?o.num:'(se asigna al guardar)'}</span>${editingId?' · editando':''}</h2>
       <button class="btn sm" id="bNueva">Empezar una nueva</button></div>
     ${orig&&ejecutada(orig)?'<p class="hint">Esta orden ya está cerrada. Lo que cambies acá no toca los datos del cierre.</p>':''}
-    <div class="grid">
+    <div class="grid g-fecha">
       <label>Fecha<input type="date" id="f_fecha" value="${esc(o.fecha)}"></label>
       <label>Potrero / lote${selLista('id="f_potrero"','potrero',o.potrero)}</label>
       <label>Cultivo${selLista('id="f_cultivo"','cultivo',o.cultivo)}</label>
@@ -571,7 +638,7 @@ function vOrden(){
   <section class="card">
     <h2>Labor</h2>
     <div class="grid">
-      <label>Tipo de labor<select id="f_labor">${opt(LABORES.map(x=>[x,x]),o.labor)}</select></label>
+      <label>Tipo de labor${selLista('id="f_labor"','labor',o.labor)}</label>
       <label>Contratista${selLista('id="f_contratista"','contratista',o.contratista)}</label>
       <label>Operario<input id="f_operario" value="${esc(o.operario)}"></label>
       <label>Precio labor (USD/ha)<input id="f_precio" inputmode="decimal" value="${esc(o.precio)}"></label>
@@ -594,10 +661,10 @@ function vOrden(){
       <button class="btn accent" id="bPDF">Guardar y descargar PDF</button>
     </div>
   </section>`;
-  ['fecha','labor','operario','precio','sup','caudal','tanque','obs'].forEach(k=>{
+  ['fecha','operario','precio','sup','caudal','tanque','obs'].forEach(k=>{
     $('#f_'+k).addEventListener('input',e=>{o[k]=e.target.value;updCalc()});
   });
-  ['potrero','cultivo','contratista'].forEach(k=>bindLista($('#f_'+k),k,v=>{o[k]=v}));
+  ['potrero','cultivo','contratista','labor'].forEach(k=>bindLista($('#f_'+k),k,v=>{o[k]=v}));
   $('#bNueva').onclick=()=>{draft=newDraft();editingId=null;render()};
   $('#bAddItem').onclick=()=>{o.items.push({prod:'',comercial:'',form:'SL',dosis:'',unidad:'L/ha'});renderItems();updCalc()};
   $('#bGuardar').onclick=async()=>{if(await saveDraft())toast('Orden guardada')};
@@ -611,7 +678,7 @@ function renderItems(){
      <div class="g">
        <label>Producto (principio activo)${selLista('data-p','producto',it.prod)}</label>
        <label>Nombre comercial<input data-k="comercial" value="${esc(it.comercial)}"></label>
-       <label>Formulación<select data-k="form">${opt(Object.entries(FORMS).map(([k,v])=>[k,v.l]),it.form)}</select></label>
+       <label>Formulación${selForma('data-k="form"',it.form)}</label>
        <label>Dosis<input data-k="dosis" inputmode="decimal" value="${esc(it.dosis)}"></label>
        <label>Unidad<select data-k="unidad">${opt(Object.keys(UNITS).map(u=>[u,u]),it.unidad)}</select></label>
      </div>
@@ -624,6 +691,7 @@ function renderItems(){
     const i=+el.dataset.i;
     el.querySelectorAll('[data-k]').forEach(inp=>{
       inp.addEventListener('input',e=>{
+        if(String(e.target.value).startsWith('__'))return;
         const k=inp.dataset.k;o.items[i][k]=e.target.value;
         updCalc();
       });
@@ -635,6 +703,7 @@ function renderItems(){
         el.querySelector('[data-k=form]').value=p.form;el.querySelector('[data-k=unidad]').value=p.unidad;}
       updCalc()},()=>({form:o.items[i].form,unidad:o.items[i].unidad,comercial:o.items[i].comercial}));
     el.querySelector('[data-del]').onclick=()=>{o.items.splice(i,1);renderItems();updCalc()};
+    bindForma(el.querySelector('[data-k=form]'),v=>{o.items[i].form=v;updCalc()});
   });
 }
 function updCalc(){
@@ -667,7 +736,7 @@ function updCalc(){
 }
 function mixSteps(c){
   const s=[{t:'Agua: llenar el tanque hasta la mitad',d:'Agua limpia y empezar la agitación.'}];
-  c.items.forEach(i=>s.push({t:`${i.prod||'Producto'}${i.comercial?' ('+i.comercial+')':''}: ${fmt(i.porTq)} ${i.base} por tanque lleno`,d:(FORMS[i.form]||FORMS.OTRO).r+notaProd(i.prod)}));
+  c.items.forEach(i=>s.push({t:`${i.prod||'Producto'}${i.comercial?' ('+i.comercial+')':''}: ${fmt(i.porTq)} ${i.base} por tanque lleno`,d:forma(i.form).r+notaProd(i.prod)}));
   s.push({t:'Agua: completar el tanque',d:'Mantener la agitación hasta terminar la aplicación.'});
   return s;
 }
@@ -1157,7 +1226,7 @@ function vProd(){
         <div class="g">
           <label>Producto<input data-k="nombre" value="${esc(p.nombre)}"></label>
           <label>Nombre comercial<input data-k="comercial" value="${esc(p.comercial)}"></label>
-          <label>Formulación<select data-k="form">${opt(Object.entries(FORMS).map(([k,v])=>[k,v.l]),p.form)}</select></label>
+          <label>Formulación${selForma('data-k="form"',p.form)}</label>
           <label>Unidad de dosis<select data-k="unidad">${opt(Object.keys(UNITS).map(u=>[u,u]),p.unidad)}</select></label>
           <label>Precio ref. USD por ${(UNITS[p.unidad]||UNITS['L/ha']).b}<input data-k="precio" inputmode="decimal" value="${esc(p.precio??'')}"></label>
         </div>
@@ -1174,8 +1243,9 @@ function vProd(){
       if(i.dataset.k==='nombre'){i.addEventListener('change',async()=>{const p=S.products.find(x=>x.id===id);
         if(!limpiarNombre(i.value)){i.value=p.nombre;return}
         if(await renombrar('producto',p.nombre,i.value))setTimeout(vProd,500)});return}
-      i.addEventListener('input',e=>{const k=i.dataset.k,v=e.target.value;later(id+k,()=>db.collection('productos').doc(id).update({[k]:k==='precio'?(v.trim()===''?'':n(v)):v.trim()}))})});
+      i.addEventListener('input',e=>{const k=i.dataset.k,v=e.target.value;if(v.startsWith('__'))return;later(id+k,()=>db.collection('productos').doc(id).update({[k]:k==='precio'?(v.trim()===''?'':n(v)):v.trim()}))})});
     el.querySelector('[data-del]').onclick=()=>{db.collection('productos').doc(id).delete();setTimeout(vProd,300)};
+    bindForma(el.querySelector('[data-k=form]'),v=>db.collection('productos').doc(id).update({form:v}));
   });
 }
 
@@ -1198,6 +1268,7 @@ function vAjustes(){
   <section class="card">
     <h2>Listas desplegables</h2>
     ${htmlListas()}
+    ${htmlFormas()}
   </section>
   <section class="card">
     <h2>Copia de seguridad</h2>
@@ -1255,7 +1326,7 @@ function makePDF(o){
   const last=c.resto>0.01, us=ci&&ci.usado||{};
   const rows=[['1','Agua','','','','','','Llenar el tanque hasta la mitad con agua limpia y empezar a agitar.']];
   c.items.forEach((i,k)=>{const u=us[keyOf(i.prod,i.base)];rows.push([String(k+2),i.prod+(i.comercial?'\n'+i.comercial:''),i.form,fmt(n(i.dosis),3)+' '+i.unidad,fmt(i.total)+' '+i.base,
-    fmt(i.porTq)+' '+i.base+(last?'\nÚltimo: '+fmt(i.ult)+' '+i.base:''),u!==undefined?fmt(u)+' '+i.base:'',((FORMS[i.form]||FORMS.OTRO).r+notaProd(i.prod)).trim()])});
+    fmt(i.porTq)+' '+i.base+(last?'\nÚltimo: '+fmt(i.ult)+' '+i.base:''),u!==undefined?fmt(u)+' '+i.base:'',(forma(i.form).r+notaProd(i.prod)).trim()])});
   rows.push([String(c.items.length+2),'Agua','','','','','','Completar el tanque y mantener la agitación.']);
   doc.autoTable({startY:y,margin:{left:M,right:M},theme:'grid',headStyles:head,styles:{fontSize:8.5,cellPadding:1.8,valign:'middle'},
     head:[['Paso','Producto','Form.','Dosis','Total','Por tanque','Usado','Recomendación']],body:rows,
