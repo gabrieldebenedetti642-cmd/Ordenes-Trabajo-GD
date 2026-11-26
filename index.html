@@ -70,6 +70,9 @@ textarea{min-height:60px;resize:vertical}
 .items{display:grid;gap:10px}
 .item{border:1px solid var(--line);border-radius:8px;padding:12px;display:grid;gap:8px;background:var(--field)}
 .item .g{display:grid;grid-template-columns:2fr 1.4fr 1.4fr .9fr .9fr;gap:8px}
+.item .g.g-siembra{grid-template-columns:1fr 1.6fr 1.2fr 1fr;align-items:end}
+.item .g.g-fert,.item .g.g-cosecha,.item .g.g-labor{grid-template-columns:2fr 1fr 1fr 1fr;align-items:end}
+@media (max-width:640px){.item .g.g-siembra,.item .g.g-fert,.item .g.g-cosecha,.item .g.g-labor{grid-template-columns:1fr 1fr}}
 .item .res{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted)}
 .item .res b{color:var(--ink)}
 .step{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--brand);color:var(--brand-ink);font:600 12px var(--sans)}
@@ -413,7 +416,7 @@ const LISTAS={
   producto:{titulo:'Productos',nota:'La lista es la misma para todos los campos. La formulación, la unidad y el precio de cada uno se completan en la pestaña Productos.'}
 };
 const CLAVE={contratista:'contratistas',cultivo:'cultivos',labor:'labores'};
-const LABORES_BASE=['Pulverización terrestre','Pulverización aérea','Fertilización','Siembra','Refertilización','Movimiento de tierra','Otra'];
+const LABORES_BASE=['Pulverización terrestre','Pulverización aérea','Siembra','Fertilización','Refertilización','Trilla','Movimiento de tierra','Otra'];
 /* Formulaciones: las fijas más las que agrega cada uno (con su lugar en el orden de carga y su recomendación) */
 const NUEVA_F='__nuevaforma__';
 const formasPropias=()=>(S.listas&&S.listas.formulaciones)||[];
@@ -516,6 +519,7 @@ async function renombrar(tipo,viejo,nuevo){
         ups.push(db.collection('campos').doc(CID).set({potreros:nueva},{merge:true}));
         S.orders.filter(o=>igual(o[k])).forEach(o=>ups.push(db.collection('ordenes').doc(o.id).update({[k]:destino})));
       }else{
+        if(tipo==='labor'){const md={...((S.listas&&S.listas.laborModos)||{})};if(md[viejo]&&!md[destino])md[destino]=md[viejo];delete md[viejo];ups.push(db.collection('config').doc('listas').set({laborModos:md},{merge:true}))}
         ups.push(db.collection('config').doc('listas').set({[CLAVE[tipo]]:tipo==='labor'?lista(tipo).map(x=>igual(x)?destino:x).filter((x,i,a)=>a.indexOf(x)===i):nueva},{merge:true}));
         const qo=await db.collection('ordenes').get();
         qo.docs.forEach(d=>{if(igual(d.data()[k]))ups.push(d.ref.update({[k]:destino}))});
@@ -541,8 +545,8 @@ function htmlListas(){
       :[...new Set(activas().map(o=>limpiarNombre(o[L.campoOrden])).filter(Boolean))];
     const fuera=usados.filter(u=>!items.includes(u));
     return `<div class="lst" data-tipo="${tipo}">
-      <h3>${L.titulo}</h3><p class="hint">${L.nota} Si cambiás un nombre, se cambia en todas las órdenes${tipo==='producto'?' y facturas':''}. Si le ponés el nombre de otro que ya existe, se unen.</p>
-      ${items.length?items.map(x=>`<div class="lrow"><input value="${esc(x)}" data-ren="${esc(x)}" aria-label="Nombre"><button class="btn sm danger" data-quitar="${esc(x)}">Quitar</button></div>`).join(''):'<div class="hint">La lista está vacía.</div>'}
+      <h3>${L.titulo}</h3><p class="hint">${tipo==='labor'?'Al lado de cada labor elegís cómo se calcula: con tanque y caldo, con semillas, con fertilizante y tolva, con rinde y camiones, o sin productos. ':''}${L.nota} Si cambiás un nombre, se cambia en todas las órdenes${tipo==='producto'?' y facturas':''}. Si le ponés el nombre de otro que ya existe, se unen.</p>
+      ${items.length?items.map(x=>`<div class="lrow"><input value="${esc(x)}" data-ren="${esc(x)}" aria-label="Nombre">${tipo==='labor'?`<select data-modo="${esc(x)}" aria-label="Cómo se calcula">${opt(Object.entries(MODOS).map(([k,v])=>[k,v.l]),modoLabor(x))}</select>`:''}<button class="btn sm danger" data-quitar="${esc(x)}">Quitar</button></div>`).join(''):'<div class="hint">La lista está vacía.</div>'}
       <div class="lrow"><input placeholder="Agregar a la lista" data-add>${tipo==='producto'?`${selForma('data-addform aria-label="Formulación"','SL')}<select data-addunid aria-label="Unidad">${opt(Object.keys(UNITS).map(u=>[u,u]),'L/ha')}</select>`:''}<button class="btn sm primary" data-addbtn>Agregar</button></div>
       ${fuera.length?`<div class="fuera"><b>Escritos en órdenes pero fuera de la lista</b>${fuera.map(f=>`
         <div class="lrow"><span class="fn">${esc(f)}</span>
@@ -556,6 +560,9 @@ function bindListas(rehacer){
     box.querySelectorAll('[data-ren]').forEach(inp=>inp.addEventListener('change',async()=>{
       if(!limpiarNombre(inp.value)){inp.value=inp.dataset.ren;return}
       if(await renombrar(tipo,inp.dataset.ren,inp.value))setTimeout(rehacer,400)}));
+    box.querySelectorAll('[data-modo]').forEach(sl=>sl.onchange=async()=>{
+      const modos={...((S.listas&&S.listas.laborModos)||{}),[sl.dataset.modo]:sl.value};S.listas.laborModos=modos;
+      try{await db.collection('config').doc('listas').set({laborModos:modos},{merge:true});toast('Guardado')}catch(x){toast('No se pudo guardar')}});
     box.querySelectorAll('[data-quitar]').forEach(b=>b.onclick=async()=>{await quitarDeLista(tipo,b.dataset.quitar);setTimeout(rehacer,300)});
     const af=box.querySelector('[data-addform]'), au=box.querySelector('[data-addunid]');
     if(af)bindForma(af,()=>{});
@@ -613,17 +620,97 @@ function fillLists(){
   $('#dlPotreros').innerHTML=[...new Set(activas().map(o=>o.potrero).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join('');
 }
 const opt=(arr,sel)=>arr.map(([v,l])=>`<option value="${esc(v)}"${v===sel?' selected':''}>${esc(l)}</option>`).join('');
-function newDraft(){
-  return {num:null,fecha:today(),potrero:'',cultivo:'',
-    labor:lista('labor')[0]||'',contratista:'',operario:'',precio:'',sup:'',caudal:'80',tanque:'3000',obs:'',
-    items:[{prod:'',comercial:'',form:'SL',dosis:'',unidad:'L/ha'}]};
+/* ===================== MODOS DE CÁLCULO POR LABOR =====================
+   Cada tipo de labor calcula a su manera. Se adivina por el nombre y se puede cambiar en Ajustes. */
+const MODOS={
+  pulv:{l:'Pulverización (tanque y caldo)',prod:'Productos'},
+  siembra:{l:'Siembra (semillas y fertilizante)',prod:'Semillas, fertilizantes y curasemillas'},
+  fert:{l:'Fertilización (kg/ha, bolsas y tolva)',prod:'Fertilizantes'},
+  cosecha:{l:'Trilla / cosecha (rinde y camiones)',prod:'Insumos (opcional, por ejemplo gasoil)'},
+  labor:{l:'Laboreo (sin productos)',prod:'Insumos (opcional, por ejemplo gasoil)'}
+};
+function adivinarModo(nombre){
+  const s=norm(nombre);
+  if(/pulveriz|fumig|aplicaci|herbic/.test(s))return 'pulv';
+  if(/siembra|sembr/.test(s))return 'siembra';
+  if(/fertiliz|urea|abon/.test(s))return 'fert';
+  if(/trilla|cosecha|cosech/.test(s))return 'cosecha';
+  return 'labor';
 }
-const CAMPOS=['num','fecha','potrero','cultivo','labor','contratista','operario','precio','sup','caudal','tanque','obs','items'];
+const modoLabor=nombre=>((S.listas&&S.listas.laborModos)||{})[nombre]||adivinarModo(nombre);
+const TIPOS_SIEMBRA=[['semilla','Semilla'],['fertilizante','Fertilizante'],['cura','Curasemilla / inoculante'],['otro','Otro']];
+
+/* Pasa todo a dosis por hectárea, así el stock, los costos y el cierre funcionan igual para cualquier labor */
+function normalizar(o){
+  const m=modoLabor(o.labor);
+  (o.items||[]).forEach(it=>{
+    if(m!=='siembra'||!it.tipo||it.tipo==='otro')return;
+    if(it.tipo==='semilla'){
+      const pms=n(it.pms);
+      if(it.modoS==='sem')it.dosis=pms?r3(n(it.dens)*pms/1000):'';   // miles de semillas × peso de mil semillas (g) = kg por ha
+      else it.dosis=it.kgha;
+      it.unidad='kg/ha';it.form='SEM';
+    }else if(it.tipo==='fertilizante'){it.unidad='kg/ha';it.form='FERT'}
+  });
+  const semKg=(o.items||[]).filter(i=>i.tipo==='semilla').reduce((a,i)=>a+n(i.dosis),0);
+  (o.items||[]).forEach(it=>{
+    if(m==='siembra'&&it.tipo==='cura'){it.dosis=r3(n(it.d100)*semKg/100);it.unidad=it.u100==='g'?'g/ha':'cc/ha';it.form='CURA'}
+  });
+  return o;
+}
+/* Datos de cada semilla: miles por hectárea, semillas por metro y bolsas */
+function datoSemilla(it,o){
+  const pms=n(it.pms), g=(n(it.germ)||100)/100, kgha=n(it.dosis), sup=n(o.sup);
+  const milesHa=pms?kgha*1000/pms:0;                 // miles de semillas sembradas por hectárea
+  const viables=milesHa*g;
+  const dist=n(o.distSurco);
+  const porMetro=dist?milesHa*1000*(dist/100)/10000:0;
+  const totKg=kgha*sup, totMiles=milesHa*sup;
+  const bolsas=n(it.bolsa)?(it.bolsaU==='miles'?totMiles/n(it.bolsa):totKg/n(it.bolsa)):0;
+  return {pms,milesHa,viables,porMetro,totKg,totMiles,bolsas};
+}
+function datosModo(o){
+  const m=modoLabor(o.labor), c=calc(o), sup=n(o.sup);
+  if(m==='fert'){
+    const kgHa=c.items.filter(i=>i.base==='kg').reduce((a,i)=>a+n(i.dosis)*(UNITS[i.unidad]||UNITS['kg/ha']).f,0);
+    const haCarga=n(o.tolva)&&kgHa?n(o.tolva)/kgHa:0;
+    return {m,kgHa,haCarga,cargas:haCarga?sup/haCarga:0};
+  }
+  if(m==='cosecha'){
+    const prod=n(o.rinde)*sup;
+    return {m,prod,viajes:n(o.camion)?prod/n(o.camion):0};
+  }
+  return {m};
+}
+
+function newDraft(){
+  const lab=lista('labor')[0]||'';
+  return {num:null,fecha:today(),potrero:'',cultivo:'',
+    labor:lab,contratista:'',operario:'',precio:'',sup:'',caudal:'80',tanque:'3000',distSurco:'',tolva:'',rinde:'',humedad:'',camion:'',obs:'',
+    items:[itemNuevo(modoLabor(lab))]};
+}
+function itemNuevo(m){
+  if(m==='siembra')return {tipo:'semilla',prod:'',comercial:'',modoS:'kg',kgha:'',dens:'',pms:'',germ:'',bolsa:'',bolsaU:'kg',dosis:'',unidad:'kg/ha',form:'SEM'};
+  if(m==='fert')return {prod:'',comercial:'',form:'FERT',dosis:'',unidad:'kg/ha',bolsa:'50'};
+  if(m==='pulv')return {prod:'',comercial:'',form:'SL',dosis:'',unidad:'L/ha'};
+  return {prod:'',comercial:'',form:'OTRO',dosis:'',unidad:'L/ha'};
+}
+const CAMPOS=['num','fecha','potrero','cultivo','labor','contratista','operario','precio','sup','caudal','tanque','distSurco','tolva','rinde','humedad','camion','obs','items'];
 const limpio=o=>{const r={};CAMPOS.forEach(k=>r[k]=o[k]??'');return JSON.parse(JSON.stringify(r))};
 
 function vOrden(){
   if(!draft)draft=newDraft();
-  const o=draft, orig=editingId&&S.orders.find(x=>x.id===editingId);
+  const o=draft, orig=editingId&&S.orders.find(x=>x.id===editingId), m=modoLabor(o.labor);
+  const campoModo={
+    pulv:`<label>Caudal (L de caldo/ha)<input id="f_caudal" inputmode="decimal" value="${esc(o.caudal)}"></label>
+      <label>Capacidad del tanque (L)<input id="f_tanque" inputmode="decimal" value="${esc(o.tanque)}"></label>`,
+    siembra:`<label>Distancia entre surcos (cm)<input id="f_distSurco" inputmode="decimal" value="${esc(o.distSurco)}" placeholder="Ej: 40, 52, 70"></label>`,
+    fert:`<label>Capacidad de la tolva (kg)<input id="f_tolva" inputmode="decimal" value="${esc(o.tolva)}" placeholder="Ej: 1500"></label>`,
+    cosecha:`<label>Rinde estimado (kg/ha)<input id="f_rinde" inputmode="decimal" value="${esc(o.rinde)}"></label>
+      <label>Humedad estimada (%)<input id="f_humedad" inputmode="decimal" value="${esc(o.humedad)}"></label>
+      <label>Carga por camión (kg)<input id="f_camion" inputmode="decimal" value="${esc(o.camion)}" placeholder="Ej: 30000"></label>`,
+    labor:''
+  }[m];
   $('#app').innerHTML=`
   <section class="card">
     <div class="row" style="justify-content:space-between"><h2>Orden de trabajo Nº <span class="num" id="numBox">${editingId?o.num:'(se asigna al guardar)'}</span>${editingId?' · editando':''}</h2>
@@ -636,24 +723,23 @@ function vOrden(){
     </div>
   </section>
   <section class="card">
-    <h2>Labor</h2>
+    <div class="row" style="justify-content:space-between"><h2>Labor</h2><span class="pill plan">${esc(MODOS[m].l)}</span></div>
     <div class="grid">
       <label>Tipo de labor${selLista('id="f_labor"','labor',o.labor)}</label>
       <label>Contratista${selLista('id="f_contratista"','contratista',o.contratista)}</label>
       <label>Operario<input id="f_operario" value="${esc(o.operario)}"></label>
       <label>Precio labor (USD/ha)<input id="f_precio" inputmode="decimal" value="${esc(o.precio)}"></label>
       <label>Superficie (ha)<input id="f_sup" inputmode="decimal" value="${esc(o.sup)}"></label>
-      <label>Caudal (L de caldo/ha)<input id="f_caudal" inputmode="decimal" value="${esc(o.caudal)}"></label>
-      <label>Capacidad del tanque (L)<input id="f_tanque" inputmode="decimal" value="${esc(o.tanque)}"></label>
+      ${campoModo}
     </div>
     <div class="calc" id="calcBox"></div>
   </section>
   <section class="card">
-    <div class="row" style="justify-content:space-between"><h2>Productos</h2><button class="btn sm" id="bAddItem">+ Agregar producto</button></div>
+    <div class="row" style="justify-content:space-between"><h2>${MODOS[m].prod}</h2><button class="btn sm" id="bAddItem">+ Agregar ${m==='siembra'?'insumo':'producto'}</button></div>
     <div class="items" id="items"></div>
-    <p class="hint">El orden de carga se arma solo según la formulación. Las dosis siempre de acuerdo a la etiqueta o al técnico.</p>
+    <p class="hint">${m==='pulv'?'El orden de carga se arma solo según la formulación. ':''}${m==='siembra'?'En la semilla podés cargar los kilos por hectárea o los miles de semillas por hectárea: lo otro se calcula con el peso de mil semillas. Con la germinación te muestra cuántas son viables, y con la distancia entre surcos, cuántas semillas van por metro. ':''}Las dosis siempre de acuerdo a la etiqueta o al técnico.</p>
   </section>
-  <section class="card"><h2>Orden de carga del tanque</h2><ol class="mix" id="mix"></ol></section>
+  ${m==='pulv'?'<section class="card"><h2>Orden de carga del tanque</h2><ol class="mix" id="mix"></ol></section>':''}
   <section class="card">
     <label>Observaciones para el operario<textarea id="f_obs">${esc(o.obs)}</textarea></label>
     <div class="row">
@@ -661,78 +747,136 @@ function vOrden(){
       <button class="btn accent" id="bPDF">Guardar y descargar PDF</button>
     </div>
   </section>`;
-  ['fecha','operario','precio','sup','caudal','tanque','obs'].forEach(k=>{
-    $('#f_'+k).addEventListener('input',e=>{o[k]=e.target.value;updCalc()});
+  ['fecha','operario','precio','sup','caudal','tanque','distSurco','tolva','rinde','humedad','camion','obs'].forEach(k=>{
+    const el=$('#f_'+k);if(el)el.addEventListener('input',e=>{o[k]=e.target.value;updCalc()});
   });
-  ['potrero','cultivo','contratista','labor'].forEach(k=>bindLista($('#f_'+k),k,v=>{o[k]=v}));
+  ['potrero','cultivo','contratista'].forEach(k=>bindLista($('#f_'+k),k,v=>{o[k]=v}));
+  bindLista($('#f_labor'),'labor',v=>{
+    const antes=modoLabor(o.labor);o.labor=v;const ahora=modoLabor(v);
+    if(antes!==ahora){ // si cambia la forma de calcular, los productos vacíos se adaptan
+      o.items=o.items.filter(i=>i.prod);if(!o.items.length)o.items.push(itemNuevo(ahora));
+      if(ahora==='siembra')o.items.forEach(i=>{if(!i.tipo){i.tipo=i.unidad&&i.unidad.startsWith('kg')?'fertilizante':'otro'}});
+    }
+    vOrden()});
   $('#bNueva').onclick=()=>{draft=newDraft();editingId=null;render()};
-  $('#bAddItem').onclick=()=>{o.items.push({prod:'',comercial:'',form:'SL',dosis:'',unidad:'L/ha'});renderItems();updCalc()};
+  $('#bAddItem').onclick=()=>{o.items.push(itemNuevo(m==='siembra'&&o.items.some(i=>i.tipo==='semilla')?'fert':m));
+    if(m==='siembra'){const it=o.items[o.items.length-1];if(!it.tipo)Object.assign(it,{tipo:'fertilizante',unidad:'kg/ha',form:'FERT'})}
+    renderItems();updCalc()};
   $('#bGuardar').onclick=async()=>{if(await saveDraft())toast('Orden guardada')};
   $('#bPDF').onclick=async()=>{const ord=await saveDraft();if(ord)makePDF(ord)};
   renderItems();updCalc();
 }
-function renderItems(){
-  const o=draft;
-  $('#items').innerHTML=o.items.map((it,i)=>`
-   <div class="item" data-i="${i}">
-     <div class="g">
-       <label>Producto (principio activo)${selLista('data-p','producto',it.prod)}</label>
+const inp=(k,label,v,extra='')=>`<label>${label}<input data-k="${k}" inputmode="decimal" value="${esc(v??'')}" ${extra}></label>`;
+function htmlItem(it,i,m){
+  const prodSel=`<label>${m==='siembra'&&it.tipo==='semilla'?'Semilla / variedad':m==='pulv'?'Producto (principio activo)':'Producto'}${selLista('data-p','producto',it.prod)}</label>`;
+  const unidadSel=(lst)=>`<label>Unidad<select data-k="unidad">${opt(lst.map(u=>[u,u]),it.unidad)}</select></label>`;
+  let campos='';
+  if(m==='pulv')campos=`${prodSel}
        <label>Nombre comercial<input data-k="comercial" value="${esc(it.comercial)}"></label>
        <label>Formulación${selForma('data-k="form"',it.form)}</label>
-       <label>Dosis<input data-k="dosis" inputmode="decimal" value="${esc(it.dosis)}"></label>
-       <label>Unidad<select data-k="unidad">${opt(Object.keys(UNITS).map(u=>[u,u]),it.unidad)}</select></label>
-     </div>
-     <div class="row" style="justify-content:space-between">
-       <div class="res" data-res></div>
-       <button class="btn sm danger" data-del>Quitar</button>
-     </div>
-   </div>`).join('');
+       ${inp('dosis','Dosis',it.dosis)}${unidadSel(Object.keys(UNITS))}`;
+  else if(m==='siembra'){
+    const tipo=`<label>Tipo<select data-k="tipo">${opt(TIPOS_SIEMBRA,it.tipo||'otro')}</select></label>`;
+    if(it.tipo==='semilla')campos=`${tipo}${prodSel}
+       <label>Cargar por<select data-k="modoS">${opt([['kg','kg por hectárea'],['sem','miles de semillas por ha']],it.modoS||'kg')}</select></label>
+       ${it.modoS==='sem'?inp('dens','Miles de semillas/ha',it.dens):inp('kgha','Kilos por hectárea',it.kgha)}
+       ${inp('pms','Peso de mil semillas (g)',it.pms)}
+       ${inp('germ','Germinación (%)',it.germ,'placeholder="100"')}
+       ${inp('bolsa','Bolsa',it.bolsa,'placeholder="Ej: 40"')}
+       <label>Bolsa de<select data-k="bolsaU">${opt([['kg','kg'],['miles','miles de semillas']],it.bolsaU||'kg')}</select></label>`;
+    else if(it.tipo==='fertilizante')campos=`${tipo}${prodSel}${inp('dosis','Kilos por hectárea',it.dosis)}${inp('bolsa','Bolsa (kg)',it.bolsa,'placeholder="Ej: 50"')}`;
+    else if(it.tipo==='cura')campos=`${tipo}${prodSel}${inp('d100','Dosis cada 100 kg de semilla',it.d100)}
+       <label>Unidad<select data-k="u100">${opt([['cc','cc'],['g','g']],it.u100||'cc')}</select></label>`;
+    else campos=`${tipo}${prodSel}${inp('dosis','Dosis por ha',it.dosis)}${unidadSel(Object.keys(UNITS))}`;
+  }
+  else if(m==='fert')campos=`${prodSel}${inp('dosis','Dosis por ha',it.dosis)}${unidadSel(['kg/ha','g/ha','L/ha','cc/ha'])}${inp('bolsa','Bolsa (kg)',it.bolsa,'placeholder="Ej: 50"')}`;
+  else campos=`${prodSel}${inp('dosis','Dosis por ha',it.dosis)}${unidadSel(Object.keys(UNITS))}`;
+  return `<div class="item" data-i="${i}"><div class="g g-${m}">${campos}</div>
+     <div class="row" style="justify-content:space-between"><div class="res" data-res></div><button class="btn sm danger" data-del>Quitar</button></div></div>`;
+}
+function renderItems(){
+  const o=draft, m=modoLabor(o.labor);
+  $('#items').innerHTML=o.items.map((it,i)=>htmlItem(it,i,m)).join('');
   $('#items').querySelectorAll('.item').forEach(el=>{
     const i=+el.dataset.i;
     el.querySelectorAll('[data-k]').forEach(inp=>{
-      inp.addEventListener('input',e=>{
+      const ev=inp.tagName==='SELECT'?'change':'input';
+      inp.addEventListener(ev,e=>{
         if(String(e.target.value).startsWith('__'))return;
         const k=inp.dataset.k;o.items[i][k]=e.target.value;
+        if(k==='tipo'){const t=e.target.value;Object.assign(o.items[i],t==='semilla'?{modoS:'kg',unidad:'kg/ha',form:'SEM'}:t==='fertilizante'?{unidad:'kg/ha',form:'FERT',bolsa:o.items[i].bolsa||'50'}:t==='cura'?{u100:'cc',form:'CURA'}:{form:'OTRO',unidad:'L/ha'});renderItems()}
+        if(k==='modoS'){ // al cambiar la forma de cargar, se pasa el valor de una a la otra
+          const it=o.items[i], pms=n(it.pms);
+          if(e.target.value==='sem'){if(pms&&n(it.kgha))it.dens=String(r2(n(it.kgha)*1000/pms))}
+          else if(pms&&n(it.dens))it.kgha=String(r2(n(it.dens)*pms/1000));
+          renderItems()}
         updCalc();
       });
     });
     bindLista(el.querySelector('[data-p]'),'producto',v=>{
       o.items[i].prod=v;const p=S.products.find(p=>norm(p.nombre)===norm(v));
-      if(p&&p.form){Object.assign(o.items[i],{comercial:p.comercial||o.items[i].comercial,form:p.form,unidad:p.unidad});
+      if(p&&p.form&&m==='pulv'){Object.assign(o.items[i],{comercial:p.comercial||o.items[i].comercial,form:p.form,unidad:p.unidad});
         el.querySelector('[data-k=comercial]').value=o.items[i].comercial;
         el.querySelector('[data-k=form]').value=p.form;el.querySelector('[data-k=unidad]').value=p.unidad;}
-      updCalc()},()=>({form:o.items[i].form,unidad:o.items[i].unidad,comercial:o.items[i].comercial}));
+      if(p&&m==='siembra'&&o.items[i].tipo==='semilla'){ // trae el peso de mil semillas y la germinación de la última vez
+        if(p.pms&&!o.items[i].pms){o.items[i].pms=p.pms;el.querySelector('[data-k=pms]').value=p.pms}
+        if(p.germ&&!o.items[i].germ){o.items[i].germ=p.germ;el.querySelector('[data-k=germ]').value=p.germ}}
+      updCalc()},()=>{normalizar(o);const it=o.items[i];return {form:it.form,unidad:it.unidad,comercial:it.comercial}});
     el.querySelector('[data-del]').onclick=()=>{o.items.splice(i,1);renderItems();updCalc()};
-    bindForma(el.querySelector('[data-k=form]'),v=>{o.items[i].form=v;updCalc()});
+    const fs=el.querySelector('select[data-k=form]');if(fs)bindForma(fs,v=>{o.items[i].form=v;updCalc()});
   });
 }
 function updCalc(){
   if(!$('#calcBox'))return;
-  const c=calc(draft), P=precios(S.compras), st=stockCampo();
+  normalizar(draft);
+  const o=draft, m=modoLabor(o.labor), c=calc(o), P=precios(S.compras), st=stockCampo(), dm=datosModo(o);
   /* lo que esta misma orden ya tiene comprometido no se cuenta dos veces */
   const propia={};const orig=editingId&&S.orders.find(x=>x.id===editingId);
   if(orig&&!ejecutada(orig))consumo(orig).forEach(i=>propia[i.key]=(propia[i.key]||0)+i.cant);
   let ins=0,sinPrecio=0;
   $('#items').querySelectorAll('.item').forEach(el=>{
-    const it=draft.items[+el.dataset.i];const u=UNITS[it.unidad]||UNITS['L/ha'];
+    const it=o.items[+el.dataset.i];const u=UNITS[it.unidad]||UNITS['L/ha'];
     const tot=n(it.dosis)*c.sup*u.f, key=keyOf(it.prod,u.b), pu=P(CID,key), s=st[key];
     if(it.prod&&tot){if(pu!=null)ins+=pu*tot;else sinPrecio++}
-    let stk='';
-    if(it.prod){
-      const disp=s?s.disp+(propia[key]||0):0;
-      stk=` · Stock disponible: <b class="num ${disp<tot?'neg':''}">${fmt(disp)} ${u.b}</b>${tot>disp?` <span class="warn">faltan ${fmt(tot-disp)} ${u.b}</span>`:''}`;
+    const partes=[];
+    if(m==='siembra'&&it.tipo==='semilla'){
+      const d=datoSemilla(it,o);
+      if(it.modoS==='sem')partes.push(`<b class="num">${fmt(n(it.dosis),1)} kg/ha</b>`);
+      else if(d.pms)partes.push(`<b class="num">${fmt(d.milesHa,1)} mil semillas/ha</b>`);
+      else partes.push('<span class="warn">cargá el peso de mil semillas</span>');
+      if(n(it.germ)&&n(it.germ)<100&&d.pms)partes.push(`${fmt(d.viables,1)} mil viables/ha`);
+      if(d.porMetro)partes.push(`<b class="num">${fmt(d.porMetro,1)} semillas por metro</b>`);
+      partes.push(`Total: <b class="num">${fmt(d.totKg)} kg</b>`);
+      if(d.bolsas)partes.push(`<b class="num">${fmt(d.bolsas,1)} bolsas</b>`);
+    }else{
+      partes.push(`Total: <b class="num">${fmt(tot)} ${u.b}</b>`);
+      if(m==='pulv')partes.push(`Por tanque lleno: <b class="num">${fmt(n(it.dosis)*c.haTq*u.f)} ${u.b}</b>`);
+      if(m==='siembra'&&it.tipo==='cura')partes.push(`${fmt(n(it.dosis))} ${it.u100==='g'?'g':'cc'}/ha`);
+      if(n(it.bolsa)&&u.b==='kg'&&(m==='fert'||it.tipo==='fertilizante'))partes.push(`<b class="num">${fmt(tot/n(it.bolsa),1)} bolsas</b>`);
     }
-    el.querySelector('[data-res]').innerHTML=`Total: <b class="num">${fmt(tot)} ${u.b}</b> · Por tanque lleno: <b class="num">${fmt(n(it.dosis)*c.haTq*u.f)} ${u.b}</b>${stk}${pu!=null&&tot?` · ≈ USD <b class="num">${fmt(pu*tot,0)}</b>`:''}`;
+    if(it.prod){const disp=s?s.disp+(propia[key]||0):0;
+      partes.push(`Stock disponible: <b class="num ${disp<tot?'neg':''}">${fmt(disp)} ${u.b}</b>${tot>disp?` <span class="warn">faltan ${fmt(tot-disp)} ${u.b}</span>`:''}`)}
+    if(pu!=null&&tot)partes.push(`≈ USD <b class="num">${fmt(pu*tot,0)}</b>`);
+    el.querySelector('[data-res]').innerHTML=partes.join(' · ');
   });
-  const lab=n(draft.precio)*c.sup;
-  $('#calcBox').innerHTML=`
-    <div><b>${fmt(c.haTq,1)}</b><span>ha por tanque</span></div>
-    <div><b>${fmt(c.tanques,1)}</b><span>tanques (${c.llenos} llenos${c.resto>0.01?` + 1 de ${fmt(c.ultimoL,0)} L`:''})</span></div>
-    <div><b>${fmt(c.agua,0)}</b><span>litros de caldo en total</span></div>
-    <div><b>${fmt(lab,0)}</b><span>costo labor (USD)</span></div>
+  const lab=n(o.precio)*c.sup;
+  const costos=`<div><b>${fmt(lab,0)}</b><span>costo labor (USD)</span></div>
     <div><b>${fmt(ins,0)}</b><span>costo insumos (USD)${sinPrecio?` · ${sinPrecio} sin precio`:''}</span></div>
     <div><b>${c.sup?fmt((ins+lab)/c.sup,1):'-'}</b><span>costo total USD/ha</span></div>`;
-  $('#mix').innerHTML=mixSteps(c).map((s,i)=>`<li><span class="step">${i+1}</span><div><b>${esc(s.t)}</b>${s.d?`<div class="hint">${esc(s.d)}</div>`:''}</div></li>`).join('');
+  let extra='';
+  if(m==='pulv')extra=`<div><b>${fmt(c.haTq,1)}</b><span>ha por tanque</span></div>
+    <div><b>${fmt(c.tanques,1)}</b><span>tanques (${c.llenos} llenos${c.resto>0.01?` + 1 de ${fmt(c.ultimoL,0)} L`:''})</span></div>
+    <div><b>${fmt(c.agua,0)}</b><span>litros de caldo en total</span></div>`;
+  if(m==='siembra'){const sem=o.items.filter(i=>i.tipo==='semilla'),fe=o.items.filter(i=>i.tipo==='fertilizante');
+    extra=`<div><b>${fmt(sem.reduce((a,i)=>a+n(i.dosis)*c.sup,0),0)}</b><span>kg de semilla en total</span></div>
+      <div><b>${fmt(fe.reduce((a,i)=>a+n(i.dosis)*c.sup,0),0)}</b><span>kg de fertilizante en total</span></div>`}
+  if(m==='fert')extra=`<div><b>${fmt(dm.kgHa*c.sup,0)}</b><span>kg de fertilizante en total</span></div>
+    <div><b>${dm.haCarga?fmt(dm.haCarga,1):'-'}</b><span>ha por carga de tolva</span></div>
+    <div><b>${dm.cargas?fmt(dm.cargas,1):'-'}</b><span>cargas de tolva</span></div>`;
+  if(m==='cosecha')extra=`<div><b>${fmt(dm.prod/1000,1)}</b><span>toneladas estimadas</span></div>
+    <div><b>${dm.viajes?fmt(dm.viajes,1):'-'}</b><span>viajes de camión</span></div>`;
+  $('#calcBox').innerHTML=extra+costos;
+  if($('#mix'))$('#mix').innerHTML=mixSteps(c).map((s,i)=>`<li><span class="step">${i+1}</span><div><b>${esc(s.t)}</b>${s.d?`<div class="hint">${esc(s.d)}</div>`:''}</div></li>`).join('');
 }
 function mixSteps(c){
   const s=[{t:'Agua: llenar el tanque hasta la mitad',d:'Agua limpia y empezar la agitación.'}];
@@ -752,7 +896,10 @@ async function saveDraft(){
   if(guardando)return null;
   const o=draft;
   if(!n(o.sup)){toast('Falta la superficie');return null}
-  if(!o.items.some(i=>i.prod)){toast('Agregá al menos un producto');return null}
+  normalizar(o);
+  const mo=modoLabor(o.labor);
+  if(['pulv','siembra','fert'].includes(mo)&&!o.items.some(i=>i.prod)){toast('Agregá al menos un producto');return null}
+  if(mo==='siembra'&&o.items.some(i=>i.prod&&i.tipo==='semilla'&&i.modoS==='sem'&&!n(i.pms))){toast('Falta el peso de mil semillas para pasar a kilos');return null}
   guardando=true;
   try{
     const rec=limpio(o);rec.items=rec.items.filter(i=>i.prod);
@@ -780,6 +927,9 @@ async function saveDraft(){
       rec.id=ref.id;editingId=ref.id;draft.num=rec.num;$('#numBox')&&($('#numBox').textContent=rec.num);
     }
     agregarAlCatalogo(rec.items);
+    /* se recuerda el peso de mil semillas y la germinación de cada semilla para la próxima vez */
+    rec.items.filter(i=>i.tipo==='semilla'&&n(i.pms)).forEach(i=>{const p=S.products.find(x=>norm(x.nombre)===norm(i.prod)&&x.id);
+      if(p&&(p.pms!==i.pms||p.germ!==i.germ))db.collection('productos').doc(p.id).update({pms:i.pms,germ:i.germ||''}).catch(()=>{})});
     return rec;
   }catch(x){toast(x.code==='permission-denied'?'No tenés permiso para guardar':'No se pudo guardar. Probá de nuevo.');return null}
   finally{guardando=false}
@@ -862,7 +1012,7 @@ function vCierre(){
   const o=S.orders.find(x=>x.id===cierreId);
   if(!o){tab='historial';vHist();return}
   const ci=o.cierre||{}, items=consumo({...o,estado:'Planificada'}), us=ci.usado||{};
-  const ya=ejecutada(o);
+  const ya=ejecutada(o), mo=modoLabor(o.labor);
   $('#app').innerHTML=`
   <section class="card">
     <div class="row" style="justify-content:space-between"><h2>${ya?'Cierre de la':'Cerrar la'} orden Nº <span class="num">${o.num}</span> · ${esc(o.potrero||'')}</h2>
@@ -874,12 +1024,16 @@ function vCierre(){
       <label>Hora de fin<input type="time" id="c_hFin" value="${esc(ci.hFin||'')}"></label>
       <label>Hectáreas hechas<input id="c_ha" inputmode="decimal" value="${esc(ci.ha??o.sup)}"></label>
       <label>Operario<input id="c_operario" value="${esc(ci.operario??o.operario)}"></label>
-      <label>Viento (km/h)<input id="c_viento" inputmode="decimal" value="${esc(ci.viento||'')}"></label>
+      ${mo==='pulv'?`<label>Viento (km/h)<input id="c_viento" inputmode="decimal" value="${esc(ci.viento||'')}"></label>
       <label>Temperatura (°C)<input id="c_temp" inputmode="decimal" value="${esc(ci.temp||'')}"></label>
-      <label>Humedad (%)<input id="c_hum" inputmode="decimal" value="${esc(ci.hum||'')}"></label>
+      <label>Humedad (%)<input id="c_hum" inputmode="decimal" value="${esc(ci.hum||'')}"></label>`:''}
+      ${mo==='cosecha'?`<label>Rinde real (kg/ha)<input id="c_rinde" inputmode="decimal" value="${esc(ci.rinde||'')}"></label>
+      <label>Kilos cosechados en total<input id="c_kilos" inputmode="decimal" value="${esc(ci.kilos||'')}"></label>
+      <label>Humedad real (%)<input id="c_humGrano" inputmode="decimal" value="${esc(ci.humGrano||'')}"></label>`:''}
     </div>
+    ${mo==='cosecha'?'<p class="hint">Cargá el rinde por hectárea o los kilos totales: el otro se calcula con las hectáreas hechas.</p>':''}
   </section>
-  <section class="card">
+  <section class="card" ${items.length?'':'hidden'}>
     <h2>Producto usado de verdad</h2>
     <p class="hint">Viene cargado con lo planificado. Corregí lo que se haya usado distinto. Esto es lo que se descuenta del depósito.</p>
     <div class="usos">${items.map((i,k)=>`
@@ -900,13 +1054,18 @@ function vCierre(){
   const dif=()=>items.forEach((i,k)=>{const v=n($(`[data-u="${k}"]`).value),d=v-i.plan;
     $(`[data-dif="${k}"]`).innerHTML=Math.abs(d)<0.005?'Igual a lo planificado':`<span class="${d>0?'neg':''}">${d>0?'+':''}${fmt(d)} ${i.base} (${fmt(i.plan?d/i.plan*100:0,0)}%)</span>`});
   document.querySelectorAll('[data-u]').forEach(x=>x.oninput=dif);dif();
+  if(mo==='cosecha'){const ha=()=>n($('#c_ha').value);
+    $('#c_rinde').oninput=e=>{if(ha())$('#c_kilos').value=n(e.target.value)?Math.round(n(e.target.value)*ha()):''};
+    $('#c_kilos').oninput=e=>{if(ha())$('#c_rinde').value=n(e.target.value)?Math.round(n(e.target.value)/ha()):''}}
   $('#bVolver').onclick=()=>{reabrirConf=false;tab='historial';render()};
   $('#bCerrar').onclick=async()=>{
     const fecha=$('#c_fecha').value;if(!fecha){toast('Falta la fecha en que se hizo');return}
     if(!n($('#c_ha').value)){toast('Faltan las hectáreas hechas');return}
     const usado={};items.forEach((i,k)=>usado[i.key]=r3(n($(`[data-u="${k}"]`).value)));
     const cierre={fecha,hIni:$('#c_hIni').value,hFin:$('#c_hFin').value,ha:n($('#c_ha').value),operario:$('#c_operario').value.trim(),
-      viento:$('#c_viento').value.trim(),temp:$('#c_temp').value.trim(),hum:$('#c_hum').value.trim(),obs:$('#c_obs').value,usado,
+      viento:$('#c_viento')?$('#c_viento').value.trim():'',temp:$('#c_temp')?$('#c_temp').value.trim():'',hum:$('#c_hum')?$('#c_hum').value.trim():'',
+      ...(mo==='cosecha'?{rinde:n($('#c_rinde').value)||'',kilos:n($('#c_kilos').value)||'',humGrano:$('#c_humGrano').value.trim()}:{}),
+      obs:$('#c_obs').value,usado,
       cerradoPor:ci.cerradoPor||quien(),cerradoEn:ci.cerradoEn||new Date().toISOString(),...(ya?{editadoPor:quien()}:{})};
     try{await db.collection('ordenes').doc(o.id).update({estado:'Ejecutada',cierre,editadoPor:quien(),editadoEn:TS()});
       toast(ya?'Cierre actualizado':'Orden cerrada');tab='historial';render()}
@@ -1295,7 +1454,7 @@ const LOGO_APP='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAACgCAYAAACLz2
 function makePDF(o){
   if(!window.jspdf){toast('No se cargó el generador de PDF. Revisá la conexión.');return}
   const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4'});
-  const c=calc(o), st=campo(), W=210, M=14, ci=ejecutada(o)&&o.cierre?o.cierre:null;
+  const c=calc(o), st=campo(), W=210, M=14, ci=ejecutada(o)&&o.cierre?o.cierre:null, mo=modoLabor(o.labor), dm=datosModo(o);
   const green=[31,59,51], amber=[201,138,18];
   let y=M;
   /* logo del campo si tiene uno cargado; si no, el logo de la app */
@@ -1315,6 +1474,8 @@ function makePDF(o){
     head:[['Labor','Potrero / lote','Cultivo','Contratista','Operario','Superficie','Precio']],
     body:[[o.labor,o.potrero,o.cultivo,o.contratista,o.operario,fmt(c.sup,2)+' ha',o.precio?'USD '+fmt(n(o.precio))+'/ha':'']]});
   y=doc.lastAutoTable.finalY+6;
+  const us=ci&&ci.usado||{};
+  if(mo==='pulv'){
   doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...green);doc.text('Cálculo del caldo',M,y);y+=2;
   doc.autoTable({startY:y,margin:{left:M,right:M},theme:'plain',styles:{fontSize:9.5,cellPadding:1.6},
     body:[['Caudal',fmt(c.caudal)+' L/ha','Capacidad del tanque',fmt(c.tq,0)+' L'],
@@ -1323,7 +1484,7 @@ function makePDF(o){
     columnStyles:{0:{textColor:100},2:{textColor:100},1:{fontStyle:'bold'},3:{fontStyle:'bold'}}});
   y=doc.lastAutoTable.finalY+6;
   doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...green);doc.text('Orden de carga del tanque',M,y);y+=2;
-  const last=c.resto>0.01, us=ci&&ci.usado||{};
+  const last=c.resto>0.01;
   const rows=[['1','Agua','','','','','','Llenar el tanque hasta la mitad con agua limpia y empezar a agitar.']];
   c.items.forEach((i,k)=>{const u=us[keyOf(i.prod,i.base)];rows.push([String(k+2),i.prod+(i.comercial?'\n'+i.comercial:''),i.form,fmt(n(i.dosis),3)+' '+i.unidad,fmt(i.total)+' '+i.base,
     fmt(i.porTq)+' '+i.base+(last?'\nÚltimo: '+fmt(i.ult)+' '+i.base:''),u!==undefined?fmt(u)+' '+i.base:'',(forma(i.form).r+notaProd(i.prod)).trim()])});
@@ -1333,15 +1494,52 @@ function makePDF(o){
     columnStyles:{0:{halign:'center',cellWidth:10},2:{cellWidth:12},3:{cellWidth:22},4:{cellWidth:20,fontStyle:'bold'},5:{cellWidth:24,fontStyle:'bold'},6:{cellWidth:18},7:{cellWidth:'auto',fontSize:8}},
     didParseCell:d=>{if(d.section==='body'&&(d.row.index===0||d.row.index===rows.length-1))d.cell.styles.fillColor=[234,241,237]}});
   y=doc.lastAutoTable.finalY+6;
+  }else{
+    /* siembra, fertilización, cosecha y laboreo: sin tanque */
+    const datos=[];
+    if(mo==='siembra'&&n(o.distSurco))datos.push(['Distancia entre surcos',fmt(n(o.distSurco))+' cm']);
+    if(mo==='fert'){datos.push(['Fertilizante por ha',fmt(dm.kgHa)+' kg']);if(n(o.tolva))datos.push(['Capacidad de la tolva',fmt(n(o.tolva),0)+' kg'],['Hectáreas por carga',fmt(dm.haCarga,1)+' ha'],['Cargas de tolva',fmt(dm.cargas,1)])}
+    if(mo==='cosecha'){if(n(o.rinde))datos.push(['Rinde estimado',fmt(n(o.rinde),0)+' kg/ha'],['Producción estimada',fmt(dm.prod/1000,1)+' t']);
+      if(n(o.humedad))datos.push(['Humedad estimada',fmt(n(o.humedad),1)+' %']);if(n(o.camion))datos.push(['Carga por camión',fmt(n(o.camion),0)+' kg'],['Viajes de camión',fmt(dm.viajes,1)])}
+    if(datos.length){
+      doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...green);doc.text('Datos de la labor',M,y);y+=2;
+      const filas=[];for(let k=0;k<datos.length;k+=2)filas.push([datos[k][0],datos[k][1],datos[k+1]?datos[k+1][0]:'',datos[k+1]?datos[k+1][1]:'']);
+      doc.autoTable({startY:y,margin:{left:M,right:M},theme:'plain',styles:{fontSize:9.5,cellPadding:1.6},body:filas,
+        columnStyles:{0:{textColor:100},2:{textColor:100},1:{fontStyle:'bold'},3:{fontStyle:'bold'}}});
+      y=doc.lastAutoTable.finalY+6;
+    }
+    const its=c.items.filter(i=>i.prod);
+    if(its.length){
+      doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...green);doc.text(mo==='siembra'?'Semillas e insumos':mo==='fert'?'Fertilizantes':'Insumos',M,y);y+=2;
+      const nombreTipo={semilla:'Semilla',fertilizante:'Fertilizante',cura:'Curasemilla',otro:'Otro'};
+      const filas=its.map(i=>{
+        const u=us[keyOf(i.prod,i.base)];let det='',bol='';
+        if(i.tipo==='semilla'){const d=datoSemilla(i,o);
+          det=[d.pms?fmt(d.milesHa,1)+' mil sem/ha':'',d.pms?'PMS '+fmt(d.pms)+' g':'',n(i.germ)?'Germ. '+fmt(n(i.germ))+'%':'',d.porMetro?fmt(d.porMetro,1)+' sem/metro':''].filter(Boolean).join('\n');
+          if(d.bolsas)bol=fmt(d.bolsas,1)+' de '+fmt(n(i.bolsa))+(i.bolsaU==='miles'?' mil sem':' kg')}
+        else if(i.tipo==='cura')det=fmt(n(i.d100))+' '+(i.u100==='g'?'g':'cc')+' cada 100 kg de semilla';
+        else if(n(i.bolsa)&&i.base==='kg')bol=fmt(i.total/n(i.bolsa),1)+' de '+fmt(n(i.bolsa))+' kg';
+        return [i.prod+(i.comercial?'\n'+i.comercial:''),mo==='siembra'?(nombreTipo[i.tipo]||''):'',fmt(n(i.dosis),2)+' '+i.unidad,det,fmt(i.total)+' '+i.base,bol,u!==undefined?fmt(u)+' '+i.base:''];
+      });
+      doc.autoTable({startY:y,margin:{left:M,right:M},theme:'grid',headStyles:head,styles:{fontSize:8.5,cellPadding:1.8,valign:'middle'},
+        head:[['Producto','Tipo','Dosis por ha','Detalle','Total','Bolsas','Usado']],body:filas,
+        columnStyles:{0:{cellWidth:38},1:{cellWidth:20},2:{cellWidth:24},3:{cellWidth:'auto',fontSize:8},4:{cellWidth:22,fontStyle:'bold'},5:{cellWidth:24},6:{cellWidth:18}}});
+      y=doc.lastAutoTable.finalY+6;
+    }
+  }
   if(o.obs){doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...green);doc.text('Observaciones',M,y);y+=5;
     doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(40);const t=doc.splitTextToSize(o.obs,W-2*M);doc.text(t,M,y);y+=t.length*4.2+3}
   doc.autoTable({startY:y,margin:{left:M,right:M},theme:'grid',headStyles:{...head,fillColor:[90,100,95]},styles:{fontSize:9,cellPadding:2,minCellHeight:8},
-    head:[['Fecha ejecutada','Hora inicio','Hora fin','Ha hechas','Viento (km/h)','Temp. (°C)','Humedad (%)']],
-    body:[ci?[fmtDate(ci.fecha),ci.hIni||'',ci.hFin||'',fmt(n(ci.ha),2),ci.viento||'',ci.temp||'',ci.hum||'']:['','','','','','','']]});
+    head:[mo==='pulv'?['Fecha ejecutada','Hora inicio','Hora fin','Ha hechas','Viento (km/h)','Temp. (°C)','Humedad (%)']
+      :mo==='cosecha'?['Fecha ejecutada','Hora inicio','Hora fin','Ha hechas','Rinde real (kg/ha)','Kilos totales','Humedad (%)']
+      :['Fecha ejecutada','Hora inicio','Hora fin','Ha hechas']],
+    body:[mo==='pulv'?(ci?[fmtDate(ci.fecha),ci.hIni||'',ci.hFin||'',fmt(n(ci.ha),2),ci.viento||'',ci.temp||'',ci.hum||'']:['','','','','','',''])
+      :mo==='cosecha'?(ci?[fmtDate(ci.fecha),ci.hIni||'',ci.hFin||'',fmt(n(ci.ha),2),ci.rinde?fmt(n(ci.rinde),0):'',ci.kilos?fmt(n(ci.kilos),0):'',ci.humGrano||'']:['','','','','','',''])
+      :(ci?[fmtDate(ci.fecha),ci.hIni||'',ci.hFin||'',fmt(n(ci.ha),2)]:['','','',''])]});
   y=doc.lastAutoTable.finalY+6;
   if(ci&&ci.obs){doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...green);doc.text('Observaciones del cierre',M,y);y+=5;
     doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(40);const t=doc.splitTextToSize(ci.obs,W-2*M);doc.text(t,M,y);y+=t.length*4.2+3}
-  const notas=(st.notas??NOTAS_DEF).split('\n').filter(Boolean);
+  const notas=mo==='pulv'?(st.notas??NOTAS_DEF).split('\n').filter(Boolean):[];
   if(notas.length){
     if(y>250){doc.addPage();y=M}
     doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...green);doc.text('Notas importantes',M,y);y+=5;
@@ -1368,12 +1566,14 @@ function hojas(list,r,P,todos){
     rows:ord.map(o=>{const c=calc(o),k=costos(o,P),ci=ejecutada(o)&&o.cierre||{};return{...C(o),'Nº':+o.num||'','Fecha orden':aFecha(o.fecha),'Estado':o.estado||'Planificada',
       'Fecha ejecutada':aFecha(ci.fecha),'Potrero':o.potrero,'Cultivo':o.cultivo,'Labor':o.labor,'Contratista':o.contratista,'Operario':ci.operario||o.operario,
       'Superficie planificada (ha)':r2(c.sup),'Ha hechas':ci.ha?r2(n(ci.ha)):'','Precio labor (USD/ha)':n(o.precio),'Labor USD':r2(k.lab),'Insumos USD':r2(k.ins),'Total USD':r2(k.tot),'USD/ha':r2(k.porHa),
-      'Productos sin precio':k.falta||'','Caudal (L/ha)':c.caudal,'Tanque (L)':c.tq,'Tanques':r2(c.tanques),'Caldo total (L)':Math.round(c.agua),
+      'Productos sin precio':k.falta||'','Forma de cálculo':MODOS[modoLabor(o.labor)].l,
+      'Rinde estimado (kg/ha)':n(o.rinde)||'','Rinde real (kg/ha)':n(ci.rinde)||'','Kilos cosechados':n(ci.kilos)||'','Humedad grano (%)':ci.humGrano||'','Caudal (L/ha)':c.caudal,'Tanque (L)':c.tq,'Tanques':r2(c.tanques),'Caldo total (L)':Math.round(c.agua),
       'Hora inicio':ci.hIni||'','Hora fin':ci.hFin||'','Viento (km/h)':ci.viento||'','Temp. (°C)':ci.temp||'','Humedad (%)':ci.hum||'',
       'Productos':k.items.map(i=>i.prod).join(', '),'Observaciones':o.obs||'','Obs. cierre':ci.obs||'','Cargó':o.creadoPor||'','Cerró':ci.cerradoPor||'','Editó':o.editadoPor||''}})};
   const det=[];ord.forEach(o=>{const k=costos(o,P);k.items.forEach((i,ix)=>det.push({...C(o),'Nº':+o.num||'','Fecha orden':aFecha(o.fecha),'Estado':o.estado||'Planificada','Fecha ejecutada':aFecha(ejecutada(o)&&o.cierre?o.cierre.fecha:''),
     'Potrero':o.potrero,'Labor':o.labor,'Contratista':o.contratista,'Paso de carga':ix+2,'Producto':i.prod,'Nombre comercial':i.comercial||'',
-    'Formulación':i.form,'Dosis':n(i.dosis),'Unidad dosis':i.unidad,'Planificado':r3(i.plan),'Usado real':i.real!=null?r3(i.real):'','Diferencia':i.real!=null?r3(i.real-i.plan):'',
+    'Formulación':i.form,'Tipo de insumo':i.tipo?({semilla:'Semilla',fertilizante:'Fertilizante',cura:'Curasemilla',otro:'Otro'}[i.tipo]):'',
+    'Miles de semillas/ha':i.tipo==='semilla'&&n(i.pms)?r2(datoSemilla(i,o).milesHa):'','PMS (g)':i.tipo==='semilla'?n(i.pms)||'':'','Dosis':n(i.dosis),'Unidad dosis':i.unidad,'Planificado':r3(i.plan),'Usado real':i.real!=null?r3(i.real):'','Diferencia':i.real!=null?r3(i.real-i.plan):'',
     'Unidad':i.base,'Precio USD por unidad':i.pu!=null?r3(i.pu):'','Costo USD':r2(i.costo)}))});
   H.detalle={name:'Detalle productos',fmt:{'Planificado':F2,'Usado real':F2,'Diferencia':F2,'Precio USD por unidad':F2,'Costo USD':F2},rows:det};
   H.prod={name:'Productos gastados',fmt:{'Usado (ejecutadas)':F2,'Planificado (pendiente)':F2,'Total':F2,'Costo USD':F2,'Hectáreas':F2},
